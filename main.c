@@ -6,6 +6,8 @@
 #include "si115x.h"
 #include "si115x_functions.h"
 
+#include "def.h"
+
 volatile int timer=0;
 
 void mTick()
@@ -49,18 +51,26 @@ int main(void) {
 
     hwSetLed(LED_RED+LED_YELLOW+LED_GREEN);
 
-    si115x_init(&I2C_MID);
-    //si115x_init(&I2C_RIGHT);
+    switch(CONFIG_CHIP) {
+    case SINGLE_CHIP:
+        si115x_init_3CH(&I2C_MID);
+        Si115xStart(&I2C_MID);
+        break;
+
+    case MULTI_CHIP:
+        si115x_init_1CH(&I2C_MID);
+        si115x_init_1CH(&I2C_RIGHT);
+        si115x_init_1CH(&I2C_LEFT);
+
+        Si115xStart(&I2C_LEFT);
+        Si115xStart(&I2C_MID);
+        Si115xStart(&I2C_RIGHT);
+        break;
+
+    }
 
     hwClearLed(LED_YELLOW);
 
-    //
-    Si115xStart(&I2C_MID);
-    //Si115xPause(&I2C_MID);
-    //Si115xPause(&I2C_RIGHT);
-    //Si115xForce(&I2C_MID);
-//    SI115X_SAMPLES samples;
-//    si115x_GetMeasure(&I2C_MID, &samples);
     // Ils font ça dans la démo, mais ça ne fait pas marcher
     Si115xReadFromRegister(&I2C_MID, SI115x_REG_PART_ID);
 
@@ -94,13 +104,57 @@ SI115X_SAMPLES samples_left;
 SI115X_SAMPLES samples_mid;
 SI115X_SAMPLES samples_right;
 
+// Traite les résultats obtenus pour allumer les LEDs
+void mHandleResult()
+{
+    // Les 3 canaux donnent les résultat dans l'ordre centre, droite, gauche
+    const uint16_t thr = 0x30;
+    uint16_t currentLED=0;
+    static int lastLED = 0;
+
+    // Canal 1 (centre)
+    if (samples_mid.ch0>samples_mid.ch1 && samples_mid.ch0>samples_mid.ch2) {
+        if (samples_mid.ch0>thr) {
+            hwSetLed(LED_YELLOW);
+            currentLED=LED_YELLOW;
+            hwClearLed(LED_RED+LED_GREEN);
+        }
+        //else hwClearLed(LED_YELLOW);
+
+        // Canal 2 (droite)
+    } else if (samples_mid.ch1>samples_mid.ch0 && samples_mid.ch1>samples_mid.ch2 && samples_mid.ch1>samples_mid.ch2*2 ) {
+        if (samples_mid.ch1>thr) {
+            hwSetLed(LED_RED);
+            currentLED=LED_RED;
+            hwClearLed(LED_YELLOW + LED_GREEN);
+        }
+        //else hwClearLed(LED_RED);
+
+        // Canal 3 (gauche)
+    } else if (samples_mid.ch2>samples_mid.ch1 && samples_mid.ch2>samples_mid.ch0 && samples_mid.ch2>samples_mid.ch1*2 ) {
+        if (samples_mid.ch2>thr) {
+            hwSetLed(LED_GREEN);
+            currentLED=LED_GREEN;
+            hwClearLed(LED_RED + LED_YELLOW);
+        }
+        //else hwClearLed(LED_GREEN);
+    } //else { }
+
+    if (currentLED) {
+        lastLED=currentLED;
+    } else if (lastLED) {
+        hwSetLedFlash(lastLED);
+        lastLED=0;
+        hwTimerStart();
+    }
+}
+
 /* Traite une interruption
  *    Lit les capteurs qui ont fait une interruption
  *    Selon les valeurs mesurées, allume les LEDs
  */
 void mSi115xHandler(int src)
 {
-    static int lastLED = 0;
 
     if (src&GPIO_PIN0) {
         si115x_handler(&I2C_LEFT, &samples_left);
@@ -108,49 +162,19 @@ void mSi115xHandler(int src)
     if (src&GPIO_PIN1) {
         si115x_handler(&I2C_MID, &samples_mid);
 
-        // Les 3 canaux donnent les résultat dans l'ordre centre, droite, gauche
-        const uint16_t thr = 0x30;
-        uint16_t currentLED=0;
 
-        // Canal 1 (centre)
-        if (samples_mid.ch0>samples_mid.ch1 && samples_mid.ch0>samples_mid.ch2) {
-            if (samples_mid.ch0>thr) {
-                hwSetLed(LED_YELLOW);
-                currentLED=LED_YELLOW;
-                hwClearLed(LED_RED+LED_GREEN);
-            }
-            //else hwClearLed(LED_YELLOW);
-
-        // Canal 2 (droite)
-        } else if (samples_mid.ch1>samples_mid.ch0 && samples_mid.ch1>samples_mid.ch2 && samples_mid.ch1>samples_mid.ch2*2 ) {
-            if (samples_mid.ch1>thr) {
-                hwSetLed(LED_RED);
-                currentLED=LED_RED;
-                hwClearLed(LED_YELLOW + LED_GREEN);
-            }
-            //else hwClearLed(LED_RED);
-
-        // Canal 3 (gauche)
-        } else if (samples_mid.ch2>samples_mid.ch1 && samples_mid.ch2>samples_mid.ch0 && samples_mid.ch2>samples_mid.ch1*2 ) {
-            if (samples_mid.ch2>thr) {
-                hwSetLed(LED_GREEN);
-                currentLED=LED_GREEN;
-                hwClearLed(LED_RED + LED_YELLOW);
-            }
-            //else hwClearLed(LED_GREEN);
-        } //else { }
-
-        if (currentLED) {
-            lastLED=currentLED;
-        } else if (lastLED) {
-            hwSetLedFlash(lastLED);
-            lastLED=0;
-            hwTimerStart();
+        if (CONFIG_CHIP==SINGLE_CHIP) {
+            mHandleResult();
         }
-
     } // capteur central
 
     if (src&GPIO_PIN2) {
         si115x_handler(&I2C_RIGHT, &samples_right);
+    }
+
+    if (CONFIG_CHIP==MULTI_CHIP) {
+        samples_mid.ch1 = samples_right.ch0;
+        samples_mid.ch2 = samples_left.ch0;
+        mHandleResult();
     }
 }

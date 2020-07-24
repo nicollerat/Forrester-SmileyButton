@@ -8,6 +8,7 @@
 #include "driverlib.h"
 #include "hw.h"
 #include "main.h"
+#include "def.h"
 
 #define PIN_LED_GREEN   GPIO_PIN0
 #define PIN_LED_YELLOW  GPIO_PIN1
@@ -20,9 +21,10 @@ uint16_t hwFlagP2Interrupt = 0;
 
 void hwBackground()
 {
-    if (hwFlagP2Interrupt) {
-        mSi115xHandler(hwFlagP2Interrupt);
-        hwFlagP2Interrupt=0;
+    while (hwFlagP2Interrupt) {
+        uint16_t src=hwFlagP2Interrupt;
+        mSi115xHandler(src);
+        hwFlagP2Interrupt &= ~src;
     }
 }
 
@@ -185,7 +187,7 @@ void hwInit()
    hwPWMLedsInit();
 }
 
-#define LED_INTENSITY 150
+
 
 void hwSetLed(int mask)
 {
@@ -243,8 +245,9 @@ void hwClearLed(int mask)
 #pragma vector=PORT2_VECTOR
 __interrupt void P2_ISR (void)
 {
-    hwFlagP2Interrupt = GPIO_getInterruptStatus(GPIO_PORT_P2, GPIO_PIN0 + GPIO_PIN1 + GPIO_PIN2);
-    GPIO_clearInterrupt( GPIO_PORT_P2, GPIO_PIN0 + GPIO_PIN1 + GPIO_PIN2);
+    uint16_t src = GPIO_getInterruptStatus(GPIO_PORT_P2, GPIO_PIN0 + GPIO_PIN1 + GPIO_PIN2);
+    hwFlagP2Interrupt |= src;
+    GPIO_clearInterrupt( GPIO_PORT_P2, src);
     __bic_SR_register_on_exit(CPUOFF);
 }
 

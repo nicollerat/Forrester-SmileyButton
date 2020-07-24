@@ -14,7 +14,7 @@
  uint8_t devREVID=0;
  uint8_t devResp0=0;
 
-int16_t si115x_init( HANDLE*si115x_handle )
+int16_t si115x_init_3CH( HANDLE*si115x_handle )
 {
     int16_t    retval;
 
@@ -90,6 +90,70 @@ int16_t si115x_init( HANDLE*si115x_handle )
 
     return retval;
 }
+
+// Initialise le capteur pour un seul canal
+int16_t si115x_init_1CH( HANDLE*si115x_handle )
+{
+    int16_t    retval;
+
+    // Vu sur l'analyse de la démo
+    Si115xWriteToRegister(si115x_handle, SI115x_REG_COMMAND, CMD_PAUSE_CH);
+
+    retval  = Si115xReset( si115x_handle );
+
+    devPartID = Si115xReadFromRegister(si115x_handle, SI115x_REG_PART_ID);
+    devHWID = Si115xReadFromRegister(si115x_handle, SI115x_REG_REV_ID);
+    devREVID = Si115xReadFromRegister(si115x_handle, SI115x_REG_MFR_ID);
+
+    // Proposé par le soft de test
+        switch(2){
+        case 1: // high current
+            retval += Si115xParamSet(si115x_handle, PARAM_LED1_A, 0x3f);
+            break;
+        case 2: // mid current 100mA
+            retval += Si115xParamSet(si115x_handle, PARAM_LED1_A, 0x2A);
+            break;
+        case 3: // low current 50mA
+            retval += Si115xParamSet(si115x_handle, PARAM_LED1_A, 0x12);
+            break;
+        }
+
+    retval += Si115xParamSet( si115x_handle, PARAM_CH_LIST, 0x01);
+    retval += Si115xParamSet( si115x_handle, PARAM_ADCCONFIG0, 0x62);
+    retval += Si115xParamSet( si115x_handle, PARAM_ADCSENS0, 0x80);
+    retval += Si115xParamSet( si115x_handle, PARAM_MEASCONFIG0, 0x61);
+
+    switch(4) {
+     case 1: // Rapide 20ms
+         retval += Si115xParamSet(si115x_handle, PARAM_MEASRATE_L, 0x19);
+         break;
+
+
+     case 2: // moyen 100ms
+         retval += Si115xParamSet(si115x_handle, PARAM_MEASRATE_L, 0xFA);
+         break;
+
+     case 3: // moyen 250ms
+         retval += Si115xParamSet( si115x_handle, PARAM_MEASRATE_H, 0x01);
+         retval += Si115xParamSet( si115x_handle, PARAM_MEASRATE_L, 0x38);
+         break;
+
+     case 4: // Lent 500ms
+         retval += Si115xParamSet( si115x_handle, PARAM_MEASRATE_H, 0x02);
+         retval += Si115xParamSet( si115x_handle, PARAM_MEASRATE_L, 0x71);
+         break;
+
+     case 5: // Très lent 1s
+         retval += Si115xParamSet( si115x_handle, PARAM_MEASRATE_H, 0x04);
+         retval += Si115xParamSet( si115x_handle, PARAM_MEASRATE_L, 0xe2);
+     }
+
+    retval += Si115xWriteToRegister( si115x_handle, SI115x_REG_IRQ_ENABLE, 0x01);
+
+    return retval;
+}
+
+
 
 uint8_t st;
 uint8_t irq;

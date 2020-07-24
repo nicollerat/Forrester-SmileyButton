@@ -19,6 +19,7 @@ void hwBackground();
 void hwSetLed(int mask);
 void hwClearLed(int mask);
 void hwSetLedFlash(int mask);
+void hwPWMLedStop();
 
 void hwTimerStart();
 void hwTimerStop();

@@ -95,6 +95,7 @@ void hwInitI2CB1(HANDLE*handle)
     param.autoSTOPGeneration = EUSCI_B_I2C_NO_AUTO_STOP;
     EUSCI_B_I2C_initMaster(EUSCI_B1_BASE, &param);
 
+    EUSCI_B_I2C_enable(handle->BASE);
 }
 
 /*
@@ -189,7 +190,7 @@ void hwInitI2CA0(HANDLE*handle)
 }
 
 // Exemple sans accès à driverlib
-unsigned char i2c_read(unsigned char slv_addr, unsigned char reg_addr)
+unsigned char i2c_read_B0(unsigned char slv_addr, unsigned char reg_addr)
 {
 
     unsigned char data = 0;
@@ -229,6 +230,47 @@ unsigned char i2c_read(unsigned char slv_addr, unsigned char reg_addr)
     return data;
 }
 
+// Exemple sans accès à driverlib
+unsigned char i2c_read_B1(unsigned char slv_addr, unsigned char reg_addr)
+{
+
+    unsigned char data = 0;
+
+    while(UCB1STAT & UCBBUSY);
+
+    // Définit l'adresse du slave
+    UCB1I2CSA = slv_addr;
+
+    // Transmet le start
+    UCB1CTLW0 |= UCTR | UCTXSTT;
+
+    while(UCB1CTLW0 & UCTXSTT);
+
+    // Transmet l'adresse du registre
+    UCB1TXBUF = reg_addr;
+    while(!(UCB1IFG & UCTXIFG0));// Attend une interrupt
+
+    // Met en lecture
+    UCB1CTLW0 &= ~UCTR;
+
+    // transmet l'adress et start
+    UCB1CTLW0 |= UCTXSTT;
+
+    while(UCB1CTLW0 & UCTXSTT);
+
+    // Transmet un STOP
+    UCB1CTLW0 |= UCTXSTP;
+
+    while(!(UCB1IFG & UCRXIFG0)); // Attend une interrupt
+
+    // Récupère la donnée
+    data = UCB1RXBUF;
+
+    while(UCB1CTLW0 & UCTXSTP);
+
+    return data;
+}
+
 uint8_t EUSCI_B_I2C_masterReceiveMultiByteFinishNack (uint16_t baseAddress)
 {
     //Send stop condition.
@@ -251,7 +293,10 @@ uint16_t ifg_val[16]={0};
 void hwReadI2CB0(HANDLE*handle, uint8_t address, uint8_t * data, int len)
 {
     if (len==1) {
-        data[0]=i2c_read(handle->slave_addr, address);
+        if (handle->BASE==EUSCI_B1_BASE)
+            data[0]=i2c_read_B1(handle->slave_addr, address);
+        else
+            data[0]=i2c_read_B0(handle->slave_addr, address);
     } else {
         switch(2) {
         case 1:
