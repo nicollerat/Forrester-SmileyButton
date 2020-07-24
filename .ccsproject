@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<?ccsproject version="1.0"?>
+<projectOptions>
+	<ccsVersion value="10.0.0"/>
+	<deviceVariant value="MSP430FR2476"/>
+	<deviceFamily value="MSP430"/>
+	<deviceEndianness value="little"/>
+	<codegenToolVersion value="20.2.1.LTS"/>
+	<isElfFormat value="true"/>
+	<linkerCommandFile value="lnk_msp430fr2476.cmd"/>
+	<rts value="libc.a"/>
+	<createSlaveProjects value=""/>
+	<templateProperties value="id=BlinkLED_LP-MSP430FR2476.projectspec.BlinkLED_LP-MSP430FR2476"/>
+	<origin value="C:\ti\msp430ware_3_80_09_03\examples\boards\LP-MSP430FR2476\LP-MSP430FR2476_Software_Examples\Firmware\Source\BlinkLED_LP-MSP430FR2476\CCS\BlinkLED_LP-MSP430FR2476.projectspec"/>
+	<filesToOpen value="main.c"/>
+	<connection value="common/targetdb/connections/TIMSP430-USB.xml"/>
+	<isTargetManual value="false"/>
+</projectOptions>
