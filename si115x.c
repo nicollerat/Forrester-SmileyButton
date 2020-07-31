@@ -106,21 +106,31 @@ int16_t si115x_init_1CH( HANDLE*si115x_handle )
     devREVID = Si115xReadFromRegister(si115x_handle, SI115x_REG_MFR_ID);
 
     // Proposé par le soft de test
-        switch(2){
-        case 1: // high current
-            retval += Si115xParamSet(si115x_handle, PARAM_LED1_A, 0x3f);
-            break;
-        case 2: // mid current 100mA
-            retval += Si115xParamSet(si115x_handle, PARAM_LED1_A, 0x2A);
-            break;
-        case 3: // low current 50mA
-            retval += Si115xParamSet(si115x_handle, PARAM_LED1_A, 0x12);
-            break;
-        }
+    switch(1){
+    case 1: // high current
+        retval += Si115xParamSet(si115x_handle, PARAM_LED1_A, 0x3f);
+        break;
+    case 2: // mid current 100mA
+        retval += Si115xParamSet(si115x_handle, PARAM_LED1_A, 0x2A);
+        break;
+    case 3: // low current 50mA
+        retval += Si115xParamSet(si115x_handle, PARAM_LED1_A, 0x12);
+        break;
+    }
 
     retval += Si115xParamSet( si115x_handle, PARAM_CH_LIST, 0x01);
     retval += Si115xParamSet( si115x_handle, PARAM_ADCCONFIG0, 0x62);
-    retval += Si115xParamSet( si115x_handle, PARAM_ADCSENS0, 0x80);
+
+    switch(1) {
+    case 1: // Une mesure de 24us
+        retval += Si115xParamSet( si115x_handle, PARAM_ADCSENS0, 0x80);
+        break;
+
+    case 2:// 4 mesures (96us)
+        retval += Si115xParamSet( si115x_handle, PARAM_ADCSENS0, 0x82);
+        break;
+    }
+
     retval += Si115xParamSet( si115x_handle, PARAM_MEASCONFIG0, 0x61);
 
     switch(4) {

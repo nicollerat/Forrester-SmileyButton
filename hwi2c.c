@@ -10,6 +10,7 @@
 #define HANDLE I2C_HANDLE
 
 void hwReadI2CB0(HANDLE*handle, uint8_t address, uint8_t * data, int len);
+void hwInitI2CB1(HANDLE*handle);
 
 void hwInitI2C(HANDLE*handle)
 {
@@ -139,7 +140,16 @@ void hwSendI2CB0(HANDLE *handle, uint8_t * data, int len)
 
     if(len > 1) //cas pour plusieurs Bytes
     {
+        HWREG16(handle->BASE + OFS_UCBxIE) |= UCNACKIE;
         EUSCI_B_I2C_masterSendMultiByteStart(handle->BASE, data[0]);
+
+        //Poll for transmit interrupt flag.
+        while (!(HWREG16(handle->BASE + OFS_UCBxIFG) & (UCTXIFG| UCNACKIE))) ;
+
+        if (HWREG16(handle->BASE + OFS_UCBxIFG) & ( UCNACKIE )) {
+            HWREG16(handle->BASE + OFS_UCB0CTLW0) |= UCTXSTP;
+            return;
+        }
 
         unsigned int i = 0;
 
@@ -155,8 +165,14 @@ void hwSendI2CB0(HANDLE *handle, uint8_t * data, int len)
     else if(len == 1) //cas pour un seul byte
     {
 
+        HWREG16(handle->BASE + OFS_UCBxIE) |= UCNACKIE;
 
         EUSCI_B_I2C_masterSendSingleByte(handle->BASE, data[0]);
+
+        if (HWREG16(handle->BASE + OFS_UCBxIFG) & UCNACKIE) {
+            HWREG16(handle->BASE + OFS_UCB0CTLW0) |= UCTXSTP;
+            return;
+        }
 
     }
 }
@@ -199,6 +215,7 @@ unsigned char i2c_read_B0(unsigned char slv_addr, unsigned char reg_addr)
 
     // Définit l'adresse du slave
     UCB0I2CSA = slv_addr;
+    UCB0IE |= UCNACKIE;
 
     // Transmet le start
     UCB0CTLW0 |= UCTR | UCTXSTT;
@@ -207,8 +224,12 @@ unsigned char i2c_read_B0(unsigned char slv_addr, unsigned char reg_addr)
 
     // Transmet l'adresse du registre
     UCB0TXBUF = reg_addr;
-    while(!(UCB0IFG & UCTXIFG0));// Attend une interrupt
+    while(!(UCB0IFG & (UCTXIFG0 | UCNACKIE)));// Attend une interrupt
 
+    if (UCB0IFG & UCNACKIE) { // Le device ne répond pas
+        UCB0CTLW0 |= UCTXSTP; // Transmet un stop
+        return 0;
+    }
     // Met en lecture
     UCB0CTLW0 &= ~UCTR;
 
@@ -240,6 +261,7 @@ unsigned char i2c_read_B1(unsigned char slv_addr, unsigned char reg_addr)
 
     // Définit l'adresse du slave
     UCB1I2CSA = slv_addr;
+    UCB1IE |= UCNACKIE;
 
     // Transmet le start
     UCB1CTLW0 |= UCTR | UCTXSTT;
@@ -248,7 +270,12 @@ unsigned char i2c_read_B1(unsigned char slv_addr, unsigned char reg_addr)
 
     // Transmet l'adresse du registre
     UCB1TXBUF = reg_addr;
-    while(!(UCB1IFG & UCTXIFG0));// Attend une interrupt
+    while(!(UCB1IFG & (UCTXIFG0 | UCNACKIE)));// Attend une interrupt
+
+    if (UCB1IFG & UCNACKIE) { // Le device ne répond pas
+           UCB1CTLW0 |= UCTXSTP; // Transmet un stop
+           return 0;
+    }
 
     // Met en lecture
     UCB1CTLW0 &= ~UCTR;

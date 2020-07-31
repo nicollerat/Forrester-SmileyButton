@@ -1,4 +1,5 @@
 #include <driverlib.h>
+#include <stdbool.h>
 
 #include "hwi2c.h"
 #include "hw.h"
@@ -7,15 +8,49 @@
 #include "si115x_functions.h"
 
 #include "def.h"
+#include "nrf905.h"
+#include "buttons.h"
+
+#pragma SET_DATA_SECTION(".fram_vars")
+
+uint8_t devID[4] = DEV_ID;
+uint8_t RFsetup = DEFAULT_RF_VERSION;
+
+#pragma SET_DATA_SECTION()
+
+uint8_t mRFsetup = DEFAULT_RF_VERSION; // copy of the EEPROM
+
+bool mSending = false;
 
 volatile int timer=0;
 
+/* Tick est utilisé pour éteindre les LEDs
+ *   TODO utilise pour de plus amples tâches ?
+ */
 void mTick()
 {
     timer++;
     hwClearLed( LED_ALL);
     hwPWMLedStop();
     hwTimerStop();
+}
+
+// En même temps que le FLASH, on envoie un message
+void mButtonPressed(uint8_t mask)
+{
+    if (bHandleButtonNormal((mask&LED_GREEN)!=0, (mask&LED_YELLOW)!=0, (mask&LED_RED)!=0)) {
+        nrfSendData();
+    }
+}
+
+void mDelay_us(unsigned long us)
+{
+    // TODO ajuster selon fréquence du proc ?
+    while(us>0) {
+        __delay_cycles(1000); // 1ms
+        if (us>=1000) us -= 1000;
+        else us=0;
+    }
 }
 
 struct I2C_HANDLE I2C_LEFT;
@@ -48,6 +83,7 @@ int main(void) {
     hwInitI2C(&I2C_MID);
     hwInitI2C(&I2C_LEFT);
 
+    hwspiInit();
 
     hwSetLed(LED_RED+LED_YELLOW+LED_GREEN);
 
@@ -85,7 +121,11 @@ int main(void) {
     {
         //Enter LPM0, enable interrupts
             //__bis_SR_register(LPM0_bits + GIE);
-            __bis_SR_register(LPM4_bits + GIE);
+            if ((P2IN & 0x7) != 0x7) { // Une ligne est activée...
+                hwFlagP2Interrupt = (P2IN & 0x7) ^ 0x7;
+            } else {
+                __bis_SR_register(LPM4_bits + GIE);
+            }
 
             hwBackground();
     }
@@ -107,8 +147,12 @@ SI115X_SAMPLES samples_right;
 // Traite les résultats obtenus pour allumer les LEDs
 void mHandleResult()
 {
+    const uint16_t nbMeas = 1; // Ajuster selon le setup du chip
+    const uint16_t thrSET = 40*nbMeas; // Seuil dépend de la puissance de la LED et des distances désirées.
+    const uint16_t thrCLEAR = 20*nbMeas;
+
     // Les 3 canaux donnent les résultat dans l'ordre centre, droite, gauche
-    const uint16_t thr = 0x30;
+    static uint16_t thr = thrSET;
     uint16_t currentLED=0;
     static int lastLED = 0;
 
@@ -142,9 +186,12 @@ void mHandleResult()
 
     if (currentLED) {
         lastLED=currentLED;
+        thr = thrCLEAR; // Seuil plus bas pour déclencher
     } else if (lastLED) {
+        mButtonPressed(lastLED);
         hwSetLedFlash(lastLED);
         lastLED=0;
+        thr = thrSET;
         hwTimerStart();
     }
 }

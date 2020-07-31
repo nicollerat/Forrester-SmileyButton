@@ -24,4 +24,9 @@ void hwPWMLedStop();
 void hwTimerStart();
 void hwTimerStop();
 
+void hwDebLedOn(uint8_t mask);
+void hwDebLedOff(uint8_t mask);
+
+extern uint16_t hwFlagP2Interrupt ;
+
 #endif /* HW_H_ */

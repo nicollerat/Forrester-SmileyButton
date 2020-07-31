@@ -150,10 +150,10 @@ void hwInit()
 
     GPIO_setOutputLowOnPin(GPIO_PORT_P3, 0xFF);
     GPIO_setOutputHighOnPin(GPIO_PORT_P3, GPIO_PIN2); // nRF power disable
-    GPIO_setAsOutputPin(GPIO_PORT_P3, 0xFF);
+    GPIO_setAsOutputPin(GPIO_PORT_P3, 0xF7);
 
-    GPIO_setOutputLowOnPin(GPIO_PORT_P4, 0xFF);
-    GPIO_setAsOutputPin(GPIO_PORT_P4, 0x3F); // Let SDA2 with pull-up
+    GPIO_setOutputLowOnPin(GPIO_PORT_P4, 0xF1);
+    GPIO_setAsOutputPin(GPIO_PORT_P4, 0x31); // Let SDA2 with pull-up
 
     GPIO_setOutputLowOnPin(GPIO_PORT_P5, 0x1F);
     GPIO_setAsOutputPin(GPIO_PORT_P5, 0x1F);
@@ -170,6 +170,7 @@ void hwInit()
    GPIO_setAsOutputPin(GPIO_PORT_P6, 0xe8);
 
    // Interruption des chip capteurs
+
    GPIO_setAsInputPinWithPullUpResistor(GPIO_PORT_P2, GPIO_PIN0 + GPIO_PIN1 + GPIO_PIN2);
    GPIO_selectInterruptEdge(GPIO_PORT_P2, GPIO_PIN0 + GPIO_PIN1 + GPIO_PIN2, GPIO_HIGH_TO_LOW_TRANSITION);
 
@@ -187,8 +188,19 @@ void hwInit()
    hwPWMLedsInit();
 }
 
+// LED de debug
+void hwDebLedOn(uint8_t mask)
+{
+    P2OUT |= mask << 5;
+}
+
+void hwDebLedOff(uint8_t mask)
+{
+    P2OUT &= ~(mask << 5);
+}
 
 
+// LED principales
 void hwSetLed(int mask)
 {
     uint16_t pins=0;
