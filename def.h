@@ -1,8 +1,14 @@
 /*
  * def.h
  *
+ *
  *  Created on: 24 juil. 2020
  *      Author: Marc
+ *
+ *
+ *      Version du logiciel
+ *
+ *      0.1   MN    28.08.20   Première série de 20 pièces
  */
 
 #ifndef DEF_H_
@@ -44,21 +50,31 @@
 #define POWER_BYTE_MID    0x0A // 6 dBm
 #define POWER_BYTE_HIGH   0x0E // 10 dBm
 
-#define DEV_ID         {186,20,0,52}
+#define DEV_ID         {06,0,200,85}
 
-#define LOCK_MIN_SEC    2
+#define LOCK_MIN_SEC    2 // secondes
 
-#define TIMER_CLOCK_US  256 // uS (1Mhz / 256)
-#define TIMER_PERIOD    160 // Periode du timer
-
+#define TICK_PER_SECOND 2
 #define LOCK_MAX_SEC    (10*60)
-#define PROG_DELAY      3 // s
+#define PROG_MAX_DELAY  (5*TICK_PER_SECOND) // s après on prend le setup du temps
 
-#define DEFAULT_LOCK    10 // seconds, default button lock time
-#define PROG_BLANKING   5
+#define DEFAULT_LOCK_SEC    2 // seconds, default button lock time
+#define PROG_BLANKING   10 // Temps de blocage après programmation
+#define PROG_MIN_TIME   (2*TICK_PER_SECOND)
+#define PROG_MAX_TIME   (10*60*TICK_PER_SECOND)
 
-// Correction factor, in percent, used for button blanking correction
-//#define DEBUG
-#define RESEND_TIME     10 // Temps entre les envois
+#define PROG_ENTER_LOW  (5*TICK_PER_SECOND)
+#define PROG_ENTER_HIGH (8*TICK_PER_SECOND)
+
+#define NB_SUCCESSIVE   (1) // nombre de mesure identique successives pour prendre un vote
+#define RESEND_TIME     (10 * TICK_PER_SECOND) // Temps entre les envois (1/2 s)
+
+#define MIN_OVERRIDE    (30) // Prend le min=valeur après ce nombre de fois sans corriger le min
+#define MAX_TIME_LED_ON (10*TICK_PER_SECOND)
+
+#define USE_SPI         // Ne pénalise pas la conso si pas d'envoi
+#define LED_MODE     2  // 1 for direct, 2 for PWM
+#define PROC_SPEED   1  // 1 400kHz, 2 8Mhz
+//#define DEBUG_LED
 
 #endif /* DEF_H_ */

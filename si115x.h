@@ -15,6 +15,8 @@ typedef struct
     uint16_t    ch0;
     uint16_t    ch1;
     uint16_t    ch2;
+    uint16_t    min;
+    uint16_t    nb_min;
 } SI115X_SAMPLES ;
 
 int16_t si115x_init_1CH( HANDLE*si115x_handle );

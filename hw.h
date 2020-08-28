@@ -8,6 +8,8 @@
 #ifndef HW_H_
 #define HW_H_
 
+#include <stdint.h>
+
 #define LED_GREEN   1
 #define LED_YELLOW  2
 #define LED_RED     4
@@ -19,13 +21,15 @@ void hwBackground();
 void hwSetLed(int mask);
 void hwClearLed(int mask);
 void hwSetLedFlash(int mask);
-void hwPWMLedStop();
+void hwFlashLed(int mask);
+void hwBlinkLed(int mask);
 
 void hwTimerStart();
 void hwTimerStop();
 
 void hwDebLedOn(uint8_t mask);
 void hwDebLedOff(uint8_t mask);
+bool hwLedTick();
 
 extern uint16_t hwFlagP2Interrupt ;
 

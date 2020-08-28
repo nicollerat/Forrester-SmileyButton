@@ -104,9 +104,9 @@ void hwInitI2CB1(HANDLE*handle)
  *
  */
 
-void hwSendI2C(HANDLE *handle, uint8_t * data, int len)
+int16_t hwSendI2C(HANDLE *handle, uint8_t * data, int len)
 {
-
+    int16_t ret;
     if(handle->isA)
     {
         hwSendI2CA(handle, data, len);
@@ -114,13 +114,14 @@ void hwSendI2C(HANDLE *handle, uint8_t * data, int len)
 
     else
     {
-        hwSendI2CB0(handle, data, len);
+        ret=hwSendI2CB0(handle, data, len);
     }
+    return ret;
 }
 
-void hwSendI2CB0(HANDLE *handle, uint8_t * data, int len)
+int16_t hwSendI2CB0(HANDLE *handle, uint8_t * data, int len)
 {
-
+    int16_t ret;
     //définir mode (transmit) et slave addr.
 
     EUSCI_B_I2C_setSlaveAddress(handle->BASE,
@@ -140,24 +141,38 @@ void hwSendI2CB0(HANDLE *handle, uint8_t * data, int len)
 
     if(len > 1) //cas pour plusieurs Bytes
     {
-        HWREG16(handle->BASE + OFS_UCBxIE) |= UCNACKIE;
-        EUSCI_B_I2C_masterSendMultiByteStart(handle->BASE, data[0]);
+        // TODO cause une interrupt ? HWREG16(handle->BASE + OFS_UCBxIE) |= UCNACKIE;
+        // EUSCI_B_I2C_masterSendMultiByteStart(handle->BASE, data[0]);
+
+        //Send start condition.
+        HWREG16(handle->BASE + OFS_UCBxCTLW0) |= UCTR +  UCTXSTT;
 
         //Poll for transmit interrupt flag.
-        while (!(HWREG16(handle->BASE + OFS_UCBxIFG) & (UCTXIFG| UCNACKIE))) ;
+        while (!(HWREG16(handle->BASE + OFS_UCBxIFG) & (UCTXIFG|UCNACKIE))) ;
+
+        //Send single byte data.
+//        HWREG16(handle->BASE + OFS_UCBxTXBUF) = txData;
+
+        //Poll for transmit interrupt flag.
+//        while (!(HWREG16(handle->BASE + OFS_UCBxIFG) & (UCTXIFG| UCNACKIE))) ;
 
         if (HWREG16(handle->BASE + OFS_UCBxIFG) & ( UCNACKIE )) {
             HWREG16(handle->BASE + OFS_UCB0CTLW0) |= UCTXSTP;
-            return;
+            return -1;
         }
 
         unsigned int i = 0;
 
-        for(i = 1; i<len; i++)
+        for(i = 0; i<len; i++)
         {
-            EUSCI_B_I2C_masterSendMultiByteNext(handle->BASE, data[i]);
+            // EUSCI_B_I2C_masterSendMultiByteNext(handle->BASE, data[i]);
+            while (!(HWREG16(handle->BASE + OFS_UCBxIFG) & UCTXIFG)) ;
+
+            //Send single byte data.
+            HWREG16(handle->BASE + OFS_UCBxTXBUF) = data[i];
         }
 
+        while (!(HWREG16(handle->BASE + OFS_UCBxIFG) & (UCTXIFG| UCNACKIE))) ;
         EUSCI_B_I2C_masterSendMultiByteStop(handle->BASE);
 
     }
@@ -165,16 +180,18 @@ void hwSendI2CB0(HANDLE *handle, uint8_t * data, int len)
     else if(len == 1) //cas pour un seul byte
     {
 
-        HWREG16(handle->BASE + OFS_UCBxIE) |= UCNACKIE;
+        // TODO cause une interrupt ? HWREG16(handle->BASE + OFS_UCBxIE) |= UCNACKIE;
 
         EUSCI_B_I2C_masterSendSingleByte(handle->BASE, data[0]);
 
         if (HWREG16(handle->BASE + OFS_UCBxIFG) & UCNACKIE) {
             HWREG16(handle->BASE + OFS_UCB0CTLW0) |= UCTXSTP;
-            return;
+            return -1;
         }
 
     }
+
+    return 0;
 }
 
 void hwSendI2CA(HANDLE *handle, uint8_t * data, int len)
@@ -215,7 +232,7 @@ unsigned char i2c_read_B0(unsigned char slv_addr, unsigned char reg_addr)
 
     // Définit l'adresse du slave
     UCB0I2CSA = slv_addr;
-    UCB0IE |= UCNACKIE;
+    // TODO cause une interrupt ? UCB0IE |= UCNACKIE;
 
     // Transmet le start
     UCB0CTLW0 |= UCTR | UCTXSTT;
@@ -261,7 +278,7 @@ unsigned char i2c_read_B1(unsigned char slv_addr, unsigned char reg_addr)
 
     // Définit l'adresse du slave
     UCB1I2CSA = slv_addr;
-    UCB1IE |= UCNACKIE;
+    // TODO cause une interrupt ? UCB1IE |= UCNACKIE;
 
     // Transmet le start
     UCB1CTLW0 |= UCTR | UCTXSTT;
@@ -316,6 +333,7 @@ uint8_t EUSCI_B_I2C_masterReceiveMultiByteFinishNack (uint16_t baseAddress)
 }
 
 uint16_t ifg_val[16]={0};
+int c1=0,c2=0,c3=0,c4=0,c5=0;
 
 void hwReadI2CB0(HANDLE*handle, uint8_t address, uint8_t * data, int len)
 {
@@ -374,38 +392,45 @@ void hwReadI2CB0(HANDLE*handle, uint8_t address, uint8_t * data, int len)
         case 2:
         {
             uint16_t * pIfg = ifg_val;
+            c1=0;c2=0;c3=0;c4=0;c5=0;
 
             // TODO faire marcher ça
             *pIfg++=HWREG16(handle->BASE + OFS_UCBxIFG);
             //def. mode (receive) + slave addr.
 
-            EUSCI_B_I2C_setSlaveAddress(handle->BASE,
-               handle->slave_addr
-                );
+            //Set the address of the slave with which the master will communicate.
+            HWREG16(handle->BASE + OFS_UCBxI2CSA) = handle->slave_addr;
 
-            EUSCI_B_I2C_setMode(handle->BASE,
-                EUSCI_B_I2C_TRANSMIT_MODE
-                );
-
-            EUSCI_B_I2C_enable(handle->BASE);
-
-            EUSCI_B_I2C_masterSendMultiByteStart(handle->BASE, address);  //Envoie un START + address slave + address registre
-
-            *pIfg++=HWREG16(handle->BASE + OFS_UCBxIFG);
+            //Send start condition.
+            HWREG16(handle->BASE + OFS_UCBxCTLW0) |= UCTR +  UCTXSTT;
 
             //Poll for transmit interrupt flag.
-            while (!(HWREG16(handle->BASE + OFS_UCBxIFG) & UCTXIFG)) ;
+            while ((HWREG16(handle->BASE + OFS_UCBxCTLW0) & UCTXSTT)) c1++;
+
+            //Send single byte data.
+            HWREG16(handle->BASE + OFS_UCBxTXBUF) = address;
+
+            //Poll for transmit interrupt flag.
+            while (!(HWREG16(handle->BASE + OFS_UCBxIFG) & (UCTXIFG0 | UCNACKIE))) c2++;
+
+            if (HWREG16(handle->BASE + OFS_UCBxIFG) & (UCNACKIE)) {
+                return;
+            }
 
             *pIfg++=HWREG16(handle->BASE + OFS_UCBxIFG);
 
 
-
-            EUSCI_B_I2C_masterReceiveStart(handle->BASE);
+//            EUSCI_B_I2C_masterReceiveStart(handle->BASE);
+            //Set USCI in Receive mode
+            HWREG16(handle->BASE + OFS_UCBxCTLW0) &= ~UCTR;
+            //Send start
+            HWREG16(handle->BASE + OFS_UCBxCTLW0) |= UCTXSTT;
 
             *pIfg++=HWREG16(handle->BASE + OFS_UCBxIFG);
 
             //Poll for receive interrupt flag.
-            while (!(HWREG16(handle->BASE + OFS_UCBxIFG) & UCRXIFG)) ;
+//            while (!(HWREG16(handle->BASE + OFS_UCBxIFG) & UCRXIFG)) ;
+            while ((HWREG16(handle->BASE + OFS_UCBxCTLW0) & UCTXSTT)) c3++;
 
             *pIfg++=HWREG16(handle->BASE + OFS_UCBxIFG);
 
@@ -414,26 +439,39 @@ void hwReadI2CB0(HANDLE*handle, uint8_t address, uint8_t * data, int len)
             //EUSCI_B_I2C_masterReceiveMultiByteNext(handle->BASE);
             //while (!(HWREG16(handle->BASE + OFS_UCBxIFG)& UCRXIFG)) ;
 
+            // Lit dans le vide
+            HWREG16(handle->BASE + OFS_UCBxRXBUF);
+
             for(i = 0; i<len-1; i++)
             {
-                data[i] = EUSCI_B_I2C_masterReceiveMultiByteNext(handle->BASE);
+                //data[i] = EUSCI_B_I2C_masterReceiveMultiByteNext(handle->BASE);
                 //Poll for receive interrupt flag.
                 *pIfg++=HWREG16(handle->BASE + OFS_UCBxIFG);
-                while (!(HWREG16(handle->BASE + OFS_UCBxIFG)& UCRXIFG)) ;
+                while (!(HWREG16(handle->BASE + OFS_UCBxIFG)& UCRXIFG)) c4++;
+                data[i] = HWREG16(handle->BASE + OFS_UCBxRXBUF);
             }
 
             *pIfg++=HWREG16(handle->BASE + OFS_UCBxIFG);
 
-            data[i++]=EUSCI_B_I2C_masterReceiveMultiByteFinishNack(handle->BASE);
+            while (!(HWREG16(handle->BASE + OFS_UCBxIFG)& UCRXIFG)) c4++;
 
+//            data[i++]=HWREG16(handle->BASE + OFS_UCBxRXBUF);
+
+            //data[i++]=EUSCI_B_I2C_masterReceiveMultiByteFinishNack(handle->BASE);
+            //Send stop condition.
+            HWREG16(handle->BASE + OFS_UCBxCTLW0) |= UCTXSTP ;
+            data[i]=HWREG16(handle->BASE + OFS_UCBxRXBUF);
+
+            //Wait for Stop to finish
+            while (( HWREG16(handle->BASE + OFS_UCBxCTLW0) & UCTXSTP)!=0)  c5++;
+
+            /*
             *pIfg++=HWREG16(handle->BASE + OFS_UCBxIFG);
-
-            //Poll for receive interrupt flag.
-            while (!(HWREG16(handle->BASE + OFS_UCBxIFG)&UCTXCPTIFG)) ;
 
             data[i]=HWREG16(handle->BASE + OFS_UCBxRXBUF);
 
             *pIfg++=HWREG16(handle->BASE + OFS_UCBxIFG);
+            */
         }
             break;
         }
@@ -445,4 +483,27 @@ void hwReadI2CB0(HANDLE*handle, uint8_t address, uint8_t * data, int len)
 void hwReadI2CA0(HANDLE*handle, uint8_t address, uint8_t * data, int len)
 {
     //TODO: Read pour le port A
+}
+
+int hwUCB0Cnt=0;
+
+#pragma vector = EUSCI_B0_VECTOR
+__interrupt void intUCB0(void)
+{
+// this is a trap ISR - check for the interrupt cause here by
+// checking the interrupt flags, if necessary also clear the interrupt
+// flag
+    hwUCB0Cnt++;
+}
+
+
+int hwUCB1Cnt=0;
+
+#pragma vector = EUSCI_B1_VECTOR
+__interrupt void intUCB1(void)
+{
+// this is a trap ISR - check for the interrupt cause here by
+// checking the interrupt flags, if necessary also clear the interrupt
+// flag
+    hwUCB1Cnt++;
 }

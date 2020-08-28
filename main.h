@@ -16,7 +16,8 @@ void mSi115xHandler(int src);
 void mDelay_us(unsigned long  us);
 
 extern uint8_t devID[];
-extern uint8_t RFsetup;
+extern uint16_t mRFsetup;
 extern bool mSending;
+extern uint16_t mLockTime;
 
 #endif /* MAIN_H_ */

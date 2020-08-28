@@ -67,7 +67,9 @@ void nrfCSHigh()
 void nrfPowerNRF(bool on)
 {
     if (on) {
-        NRF_OUT_PORT &= ~NRF_POWER; // Transistor ON
+        // Enclenche le pull-up sur P3_PIN2
+        P3DIR &= ~NRF_POWER; // Met en entrée (le pull-up/down suit la valeur de OUT)
+        NRF_OUT_PORT &= ~NRF_POWER; // Transistor ON, le pull-up est activé
         NRF_OUT_PORT |= NRF_PWR_UP; // PWR_UP
         NRF_OUT_PORT |= NRF_EN; // CS
         NRF_OUT_PORT &= ~NRF_TX_EN; // TX_EN
@@ -82,8 +84,12 @@ void nrfPowerNRF(bool on)
         NRF_OUT_PORT &= ~NRF_EN; // CS
         NRF_OUT_PORT &= ~NRF_TX_EN; // TX_EN
         NRF_OUT_PORT &= ~NRF_TRX_CE; // Enable radio
+
         NRF_OUT_PORT &= ~NRF_PWR_UP; // PWR_UP
+
+        // Ne supporte pas le réenclenchement
         NRF_OUT_PORT |= NRF_POWER; // Transistor OFF
+        P3DIR |= NRF_POWER; // Met en sortie
     }
 }
 
@@ -125,10 +131,14 @@ const tRFSetup tabRFSetup[] = {
 //   Met à jour mSending
 void nrfSendData()
 {
+#ifndef USE_SPI
+    return;
+#endif
+
     hwDebLedOn(1);
 
     int t;
-    char data[32];
+    uint8_t data[32];
     tSFDMessageRF * m = (tSFDMessageRF *)&data[1];
 
     // Prépare les données
@@ -182,8 +192,8 @@ void nrfSendData()
         0xE7,0xE7,0xE7,0xE7, // RX_ADDRESS
         0xD8  }; // 11011000  CRC_MODE=1,CRC_EN=1, XOF[2:0]=011(16MHz), UP_CLK_EN=0, UP_CLK_FREQ[1:0]=0
 
-    init0[1]=tabRFSetup[RFsetup].freq;
-    init0[2]=(tabRFSetup[RFsetup].power&0xFE) | (tabRFSetup[RFsetup].freq>>8);
+    init0[1]=tabRFSetup[mRFsetup].freq;
+    init0[2]=(tabRFSetup[mRFsetup].power&0xFE) | (tabRFSetup[mRFsetup].freq>>8);
 
     nrfCSLow();
     hwspiTransmission(init0, 0, sizeof(init0));
@@ -222,4 +232,26 @@ void nrfSendData()
         mSending=true;
     }
     hwDebLedOff(1);
+}
+
+int nrfResendCounter=0;
+
+// Un bouton pressé provoque l'envoi d'un message et la répétition
+void nrfNewButton()
+{
+    nrfSendData();
+    nrfResendCounter=RESEND_TIME;
+}
+
+// Appelé à la période des mesures
+void nrfTimerHandler()
+{
+    if (mSending) {
+        if (nrfResendCounter) {
+            nrfResendCounter--;
+        } else {
+            nrfSendData();
+            nrfResendCounter=RESEND_TIME;
+        }
+    }
 }

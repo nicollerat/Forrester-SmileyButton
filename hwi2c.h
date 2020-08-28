@@ -36,10 +36,10 @@ void hwInitI2C(HANDLE *handle);
 void hwInitI2CB0(HANDLE *handle);
 void hwInitI2CA0(HANDLE *handle);
 
-void hwSendI2C(HANDLE *handle, uint8_t * data, int len);
+int16_t hwSendI2C(HANDLE *handle, uint8_t * data, int len);
 void hwReadI2C(HANDLE *handle, uint8_t address, uint8_t * data, int len);
 
-void hwSendI2CB0(HANDLE *handle, uint8_t * data, int len);
+int16_t hwSendI2CB0(HANDLE *handle, uint8_t * data, int len);
 void hwReadI2CB0(HANDLE *handle, uint8_t address, uint8_t * data, int len);
 
 void hwSendI2CA(HANDLE *handle, uint8_t * data, int len);

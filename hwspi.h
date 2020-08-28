@@ -24,5 +24,8 @@
 #define GPIO_SPI_PIN_OUT           (GPIO_PIN_SPICLK | GPIO_PIN_SPISIMO)
 
 void hwspiTransmission(uint8_t * trm, uint8_t * rcv, int len);
+void hwspiEnable();
+void hwspiDisable();
+void hwspiInit();
 
 #endif /* HWSPI_H_ */

@@ -38,5 +38,8 @@
 #define NRF905_H_
 
 void nrfSendData();
+void nrfNewButton();
+void nrfTimerHandler();
+
 
 #endif /* NRF905_H_ */

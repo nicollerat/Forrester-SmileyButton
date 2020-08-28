@@ -14,17 +14,64 @@
 #define PIN_LED_YELLOW  GPIO_PIN1
 #define PIN_LED_RED     GPIO_PIN2
 
+#if PROC_SPEED==1
 #define CS_SMCLK_DESIRED_FREQUENCY_IN_KHZ   400
-#define CS_SMCLK_FLLREF_RATIO   30
+#define CS_SMCLK_FLLREF_RATIO  30
+#else
+#define CS_SMCLK_DESIRED_FREQUENCY_IN_KHZ   8000 // Start with 400
+#define CS_SMCLK_FLLREF_RATIO   200  // 30
+#endif
 
 uint16_t hwFlagP2Interrupt = 0;
+
+void hwInitAD()
+{
+    // Initialize ADC with ADC’s built-in oscillator
+    ADC_init (ADC_BASE,   ADC_SAMPLEHOLDSOURCE_SC,   ADC_CLOCKSOURCE_ADCOSC,  ADC_CLOCKDIVIDER_1);
+    //Switch ON ADC
+    ADC_enable(ADC_BASE);
+    // Setup sampling timer to sample-and-hold for 16 clock cycles
+    ADC_setupSamplingTimer (ADC_BASE,   ADC_CYCLEHOLD_16_CYCLES,   false);
+    // Configure the Input to the Memory Buffer with the specified Reference Voltages
+    ADC_configureMemory(ADC_BASE,   ADC_INPUT_A0,
+                        ADC_VREFPOS_INT, // Vref+ = Int
+                        ADC_VREFNEG_AVSS // Vref- = AVss
+    );
+
+}
+
+uint16_t hwReadADC()
+{
+    // Clear the Interrupt Flag and start another conversion
+    ADC_clearInterrupt(ADC_BASE,ADC_COMPLETED_INTERRUPT_FLAG);
+    // Start a single conversion, no repeating or sequences.
+    ADC_startConversion (ADC_BASE,  ADC_SINGLECHANNEL);
+    // Wait for the Interrupt Flag to assert
+    while( !(ADC_getInterruptStatus(ADC_BASE,ADC_COMPLETED_INTERRUPT_FLAG)) );
+
+
+    return ADC_getResults(ADC_BASE);
+}
+
+uint16_t hwReadVoltage()
+{
+    GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN3); // Masse pour la mesure de la tension de pile
+
+    uint16_t v = hwReadADC();
+
+    GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN3); // Masse pour la mesure de la tension de pile
+
+    return v;
+}
 
 void hwBackground()
 {
     while (hwFlagP2Interrupt) {
         uint16_t src=hwFlagP2Interrupt;
         mSi115xHandler(src);
+        __bic_SR_register(GIE);
         hwFlagP2Interrupt &= ~src;
+        __bis_SR_register(GIE);
     }
 }
 
@@ -83,8 +130,21 @@ void hwTimerInit()
 //
     Timer_B_initUpModeParam param = {0};
     param.clockSource = TIMER_B_CLOCKSOURCE_SMCLK;
-    param.clockSourceDivider = TIMER_B_CLOCKSOURCE_DIVIDER_10;
-    param.timerPeriod = TIMER_PERIOD;
+
+    switch(PROC_SPEED) {
+    case 1:
+        // Version 400kHz
+        param.clockSourceDivider = TIMER_B_CLOCKSOURCE_DIVIDER_10;
+        param.timerPeriod = TIMER_PERIOD;
+        break;
+    case 2:
+        // Version 8MHZ
+        param.clockSourceDivider = TIMER_B_CLOCKSOURCE_DIVIDER_40;
+        param.timerPeriod = TIMER_PERIOD*5;
+        break;
+
+    }
+
     param.timerInterruptEnable_TBIE = TIMER_B_TBIE_INTERRUPT_DISABLE;
     param.captureCompareInterruptEnable_CCR0_CCIE =
             TIMER_B_CAPTURECOMPARE_INTERRUPT_ENABLE;
@@ -98,7 +158,7 @@ void hwTimerStart()
 {
     Timer_B_clear(TIMER_B0_BASE);
     Timer_B_clearTimerInterrupt(TIMER_B0_BASE);
-    Timer_B_startCounter(TIMER_B0_BASE,  TIMER_B_CONTINUOUS_MODE);
+    Timer_B_startCounter(TIMER_B0_BASE,  TIMER_B_UP_MODE);
 }
 
 void hwTimerStop()
@@ -106,6 +166,7 @@ void hwTimerStop()
     Timer_B_stop(TIMER_B0_BASE);
     Timer_B_clearTimerInterrupt(TIMER_B0_BASE);
 }
+
 
 void hwPWMLedsInit()
 {
@@ -151,6 +212,7 @@ void hwInit()
     GPIO_setOutputLowOnPin(GPIO_PORT_P3, 0xFF);
     GPIO_setOutputHighOnPin(GPIO_PORT_P3, GPIO_PIN2); // nRF power disable
     GPIO_setAsOutputPin(GPIO_PORT_P3, 0xF7);
+    P3REN=GPIO_PIN2; // Enable Resistor
 
     GPIO_setOutputLowOnPin(GPIO_PORT_P4, 0xF1);
     GPIO_setAsOutputPin(GPIO_PORT_P4, 0x31); // Let SDA2 with pull-up
@@ -184,14 +246,21 @@ void hwInit()
    // Initialisation d'un timer
    hwTimerInit();
 
-   // PWM pour les LEDs
-   hwPWMLedsInit();
+   if ( LED_MODE==2) {
+       // PWM pour les LEDs
+       hwPWMLedsInit();
+   }
+
+   // ADC
+   // hwInitAD();
 }
 
 // LED de debug
 void hwDebLedOn(uint8_t mask)
 {
+#ifdef DEBUG_LED
     P2OUT |= mask << 5;
+#endif
 }
 
 void hwDebLedOff(uint8_t mask)
@@ -199,15 +268,15 @@ void hwDebLedOff(uint8_t mask)
     P2OUT &= ~(mask << 5);
 }
 
-
+int hwLedON=0;
 // LED principales
 void hwSetLed(int mask)
 {
     uint16_t pins=0;
 
-    hwPWMLedStart();
+    hwLedON |= mask;
 
-    switch(2) {
+    switch(LED_MODE) {
     case 1: // GPIO
         if (mask & LED_GREEN) pins |= PIN_LED_GREEN ;
         if (mask & LED_YELLOW) pins |= PIN_LED_YELLOW ;
@@ -217,6 +286,7 @@ void hwSetLed(int mask)
         break;
 
     case 2: // PWM
+        hwPWMLedStart();
         if (mask & LED_GREEN)  {TB3CCR1 = LED_INTENSITY; TB3CCTL1 =OUTMOD_7;}
         if (mask & LED_YELLOW) {TB3CCR2 = LED_INTENSITY; TB3CCTL2 =OUTMOD_7;}
         if (mask & LED_RED)    {TB3CCR3 = LED_INTENSITY; TB3CCTL3 =OUTMOD_7;}
@@ -224,17 +294,67 @@ void hwSetLed(int mask)
     }
 }
 
+int hwLedFlashState=0;
+int hwFlashedLeds=0;
+
+void hwFlashLed(int mask)
+{
+    hwFlashedLeds=mask;
+    hwLedFlashState=2;
+    hwSetLedFlash(mask);
+    hwTimerStart(); // Le timer gère les LEDs
+}
+
+void hwBlinkLed(int mask)
+{
+    hwSetLed(mask);
+    hwLedFlashState=0;
+    hwTimerStart(); // Le timer gère les LEDs
+}
+
 void hwSetLedFlash(int mask)
 {
-    if (mask & LED_GREEN)  TB3CCR1 = 1000;
-    if (mask & LED_YELLOW) TB3CCR2 = 1000;
-    if (mask & LED_RED) TB3CCR3 = 1000 ;
+    hwLedON |= mask;
+
+    switch(LED_MODE) {
+    case 2: // PWM
+        hwPWMLedStart();
+        if (mask & LED_GREEN)  {TB3CCR1 = 1000;TB3CCTL1 =OUTMOD_7;}
+        if (mask & LED_YELLOW) {TB3CCR2 = 1000;TB3CCTL2 =OUTMOD_7;}
+        if (mask & LED_RED) {TB3CCR3 = 1000 ;TB3CCTL3 =OUTMOD_7;}
+        break;
+    }
+}
+
+// Tick de la LED, vrai quand on peut arrêter le timer
+bool hwLedTick()
+{
+    bool ret=false;
+    switch(hwLedFlashState) {
+    case 2:
+        hwClearLed( LED_ALL);
+        hwLedFlashState--;
+        break;
+
+    case 1:
+        hwSetLedFlash( hwFlashedLeds);
+        hwLedFlashState--;
+        break;
+    case 0:
+        hwClearLed( LED_ALL);
+        hwTimerStop();
+        ret=true;
+        break;
+    }
+    return ret;
 }
 
 void hwClearLed(int mask)
 {
+    hwLedON &= ~mask;
+
     uint16_t pins=0;
-    switch(2) {
+    switch(LED_MODE) {
     case 1:
         if (mask & LED_GREEN) pins |= PIN_LED_GREEN ;
         if (mask & LED_YELLOW) pins |= PIN_LED_YELLOW ;
@@ -249,6 +369,7 @@ void hwClearLed(int mask)
         if (mask & LED_GREEN)  {TB3CCR1 = 0; TB3CCTL1&=~(OUTMOD_7);}
         if (mask & LED_YELLOW) {TB3CCR2 = 0; TB3CCTL2&=~(OUTMOD_7);}
         if (mask & LED_RED) {TB3CCR3 = 0 ; TB3CCTL3&=~(OUTMOD_7);}
+        if (hwLedON==0) hwPWMLedStop();
         break;
     }
 }
@@ -292,4 +413,38 @@ __interrupt void TIMER0_B1_ISR (void)
 __interrupt void TIMER0_B0_ISR (void)
 {
     mTick();
+    Timer_B_clearTimerInterrupt(TIMER_B0_BASE);
+
+}
+
+int hwTrapCnt=0;
+int hwUNMICnt=0;
+int hwSYSNMICnt=0;
+
+
+#pragma vector = UNMI_VECTOR
+__interrupt void TrapUNMI(void)
+{
+// this is a trap ISR - check for the interrupt cause here by
+// checking the interrupt flags, if necessary also clear the interrupt
+// flag
+    hwUNMICnt++;
+}
+
+#pragma vector = SYSNMI_VECTOR
+__interrupt void TrapSYSNMI(void)
+{
+// this is a trap ISR - check for the interrupt cause here by
+// checking the interrupt flags, if necessary also clear the interrupt
+// flag
+    hwSYSNMICnt++;
+}
+
+#pragma vector = unused_interrupts
+__interrupt void TrapIsr(void)
+{
+// this is a trap ISR - check for the interrupt cause here by
+// checking the interrupt flags, if necessary also clear the interrupt
+// flag
+    hwTrapCnt++;
 }

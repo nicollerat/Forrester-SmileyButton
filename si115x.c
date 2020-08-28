@@ -8,6 +8,8 @@
 
 #include "si115x_functions.h"
 #include "si115x.h"
+#include "hw.h"
+#include "def.h"
 
  uint8_t devPartID=0;
  uint8_t devHWID=0;
@@ -32,7 +34,7 @@ int16_t si115x_init_3CH( HANDLE*si115x_handle )
     devREVID = Si115xReadFromRegister(si115x_handle, SI115x_REG_MFR_ID);
 
     // Proposé par le soft de test
-    switch(2){
+    switch(3){
     case 1: // high current
         retval += Si115xParamSet(si115x_handle, PARAM_LED1_A, 0x3f);
         retval += Si115xParamSet(si115x_handle, PARAM_LED2_A, 0x3f);
@@ -60,7 +62,7 @@ int16_t si115x_init_3CH( HANDLE*si115x_handle )
     // Ajouté pour faire marcher...
     retval += Si115xParamSet(si115x_handle, PARAM_MEASCOUNT0, 0x1);
 
-    switch(4) {
+    switch(5) {
     case 1: // Rapide 20ms
         retval += Si115xParamSet(si115x_handle, PARAM_MEASRATE_L, 0x19);
         break;
@@ -97,7 +99,13 @@ int16_t si115x_init_1CH( HANDLE*si115x_handle )
     int16_t    retval;
 
     // Vu sur l'analyse de la démo
-    Si115xWriteToRegister(si115x_handle, SI115x_REG_COMMAND, CMD_PAUSE_CH);
+    int16_t res=Si115xWriteToRegister(si115x_handle, SI115x_REG_COMMAND, CMD_PAUSE_CH);
+
+    if (res<0) {
+        hwClearLed(LED_ALL);
+        hwSetLed(LED_RED);
+        while(1);
+    }
 
     retval  = Si115xReset( si115x_handle );
 
@@ -106,7 +114,7 @@ int16_t si115x_init_1CH( HANDLE*si115x_handle )
     devREVID = Si115xReadFromRegister(si115x_handle, SI115x_REG_MFR_ID);
 
     // Proposé par le soft de test
-    switch(1){
+    switch(2){
     case 1: // high current
         retval += Si115xParamSet(si115x_handle, PARAM_LED1_A, 0x3f);
         break;
@@ -186,16 +194,32 @@ void si115x_GetMeasure(HANDLE *handle, SI115X_SAMPLES *samples)
 void si115x_handler(HANDLE *si115x_handle, SI115X_SAMPLES *samples)
 {
     uint8_t buffer[10];
-    Si115xBlockRead( si115x_handle,
-                     SI115x_REG_IRQ_STATUS,
-                      7,
-                      buffer);
-    samples->irq_status = buffer[0];
-    samples->ch0  = buffer[1] <<  8;
-    samples->ch0 |= buffer[2];
-    samples->ch1  = buffer[3] <<  8;
-    samples->ch1 |= buffer[4];
-    samples->ch2  = buffer[5] <<  8;
-    samples->ch2 |= buffer[6];
+    switch(CONFIG_CHIP) {
+    case SINGLE_CHIP:
+        Si115xBlockRead( si115x_handle,
+                         SI115x_REG_IRQ_STATUS,
+                          7,
+                          buffer);
+        samples->irq_status = buffer[0];
+        samples->ch0  = buffer[1] <<  8;
+        samples->ch0 |= buffer[2];
+
+        samples->ch1  = buffer[3] <<  8;
+        samples->ch1 |= buffer[4];
+        samples->ch2  = buffer[5] <<  8;
+        samples->ch2 |= buffer[6];
+        break;
+
+    case MULTI_CHIP:
+        Si115xBlockRead( si115x_handle,
+                         SI115x_REG_IRQ_STATUS,
+                         3,
+                         buffer);
+        samples->irq_status = buffer[0];
+        samples->ch0  = buffer[1] <<  8;
+        samples->ch0 |= buffer[2];
+        break;
+
+    }
 }
 

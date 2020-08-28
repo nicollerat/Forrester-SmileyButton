@@ -17,17 +17,21 @@
 #include "si115x_functions.h"
 #include <driverlib.h>
 #include "hwi2c.h"
+#include "def.h"
 
-#define Si115xDelay_10ms() __delay_cycles(10000)
-
+#if PROC_SPEED==1
+#define Si115xDelay_10ms() __delay_cycles(10000L)
+#else
+#define Si115xDelay_10ms() __delay_cycles(10000L*20)
+#endif
 
 int16_t Si115xWriteToRegister(HANDLE *handle, uint8_t  address, uint8_t  value)
 {
     uint8_t buffer[2];
     buffer[0]=address;
     buffer[1]=value;
-    hwSendI2C(handle , buffer, 2);
-    return 0;
+
+    return hwSendI2C(handle , buffer, 2);
 }
 
 int16_t Si115xReadFromRegister( HANDLE *handle, uint8_t  address)
