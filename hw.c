@@ -300,7 +300,7 @@ int hwFlashedLeds=0;
 void hwFlashLed(int mask)
 {
     hwFlashedLeds=mask;
-    hwLedFlashState=2;
+    hwLedFlashState=0; // Un seul flash 0, 2 flash 2
     hwSetLedFlash(mask);
     hwTimerStart(); // Le timer gère les LEDs
 }

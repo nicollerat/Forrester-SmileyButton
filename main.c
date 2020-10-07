@@ -256,7 +256,7 @@ void mHandleResult()
 
         // Si on a un bouton pressé, on traite le moment où un vote est envoyé
         if (currentLED && nbLedsOn==1) { // Un seul bouton détecte
-            hwSetLed(currentLED);
+            // TODO pas tout de suite hwSetLed(currentLED);
             // Attend quelques périodes
             if (lastLED==currentLED) {
                 mDetectCount++;
@@ -286,7 +286,7 @@ void mHandleResult()
                 mBlankingCounter=mLockTime;
                 hwClearLed(LED_ALL);
             } else {
-                hwSetLed(currentLED);
+                // TODO ne pas allumer hwSetLed(currentLED);
             }
         } else {
             thr = thrSET;
@@ -323,6 +323,7 @@ void mTrakMin(SI115X_SAMPLES * sample)
             if (sample->nb_min>MIN_OVERRIDE) sample->min=sample->ch0;
         }
     } else {
+        // TODO MN ignorer le 0, valeur improbable plutot liée à une problème ?
         sample->min=0;
         sample->nb_min=0;
     }
