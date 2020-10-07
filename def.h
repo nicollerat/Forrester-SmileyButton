@@ -50,7 +50,7 @@
 #define POWER_BYTE_MID    0x0A // 6 dBm
 #define POWER_BYTE_HIGH   0x0E // 10 dBm
 
-#define DEV_ID         {06,0,200,85}
+#define DEV_ID         {02,0,200,85}
 
 #define LOCK_MIN_SEC    2 // secondes
 
