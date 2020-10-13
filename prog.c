@@ -295,12 +295,21 @@ bool progHandleButtonState(bool BG, bool BM, bool BD)
             hwSetLed(LED_GREEN);
             progCounter=0;
         } else if (BD) {
-            hwSetLed(LED_RED);
-            while(1) { // Bloque pour voir
-                __bic_SR_register(GIE);
-                __bis_SR_register(LPM4_bits);
-                prog_testWD++;
+            switch(1) {
+            case 1:
+                while(1) { // Bloque pour voir
+                    hwSetLed(LED_RED);
+
+                    __bic_SR_register(GIE);
+                    __bis_SR_register(LPM4_bits);
+                    prog_testWD++;
+                }
+                break;
+            case 2: // Arrête les mesures pour consommer un min
+                mStopSensors();
+                break;
             }
+
         } else {
             progCounter++;
             if (progCounter>=PROG_MAX_DELAY) {

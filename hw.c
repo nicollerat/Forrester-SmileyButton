@@ -14,6 +14,8 @@
 #define PIN_LED_YELLOW  GPIO_PIN1
 #define PIN_LED_RED     GPIO_PIN2
 
+#define DEBUG_LED
+
 #if PROC_SPEED==1
 #define CS_SMCLK_DESIRED_FREQUENCY_IN_KHZ   400
 #define CS_SMCLK_FLLREF_RATIO  30
@@ -23,6 +25,7 @@
 #endif
 
 uint16_t hwFlagP2Interrupt = 0;
+
 
 void hwInitAD()
 {
@@ -72,6 +75,13 @@ void hwBackground()
         __bic_SR_register(GIE);
         hwFlagP2Interrupt &= ~src;
         __bis_SR_register(GIE);
+    }
+
+    // Test du bouton
+    if ((P5IN & 0x10) ==0) {
+        hwDebLedOn(4);
+    } else {
+        hwDebLedOff(4);
     }
 }
 
@@ -243,6 +253,9 @@ void hwInit()
    GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN4 + GPIO_PIN5 + GPIO_PIN6 + GPIO_PIN7); // Inutilisé et les LED de debug
    GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN3); // Masse pour la mesure de la tension de pile
 
+   // Bouton power ON
+   GPIO_setAsInputPinWithPullUpResistor(GPIO_PORT_P5, GPIO_PIN4);
+
    // Initialisation d'un timer
    hwTimerInit();
 
@@ -300,7 +313,7 @@ int hwFlashedLeds=0;
 void hwFlashLed(int mask)
 {
     hwFlashedLeds=mask;
-    hwLedFlashState=0; // Un seul flash 0, 2 flash 2
+    hwLedFlashState=2; // set à 0 pour 1 flash, set à 2 pour avoir 2 flash
     hwSetLedFlash(mask);
     hwTimerStart(); // Le timer gère les LEDs
 }
@@ -383,6 +396,7 @@ __interrupt void P2_ISR (void)
     GPIO_clearInterrupt( GPIO_PORT_P2, src);
     __bic_SR_register_on_exit(CPUOFF);
 }
+
 
 //******************************************************************************
 //
