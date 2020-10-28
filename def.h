@@ -9,6 +9,8 @@
  *      Version du logiciel
  *
  *      0.1   MN    28.08.20   Première série de 20 pièces
+ *
+ *      0.2   MN    13.10.20   Première série 50 pièces, 2 flash et pas d'allumage avant.
  */
 
 #ifndef DEF_H_
@@ -30,8 +32,8 @@
 #define MAX_VERSION 4
 #define MID_VERSION 5
 
-#define DEFAULT_RF_VERSION EU_VERSION
-//#define DEFAULT_RF_VERSION US_VERSION
+//#define DEFAULT_RF_VERSION EU_VERSION
+#define DEFAULT_RF_VERSION US_VERSION
 
 // Canaux de base pour les régions
     // Formule CH=(freq/2 -422.4)*10
