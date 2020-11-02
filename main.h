@@ -14,6 +14,7 @@
 void mTick();
 void mSi115xHandler(int src);
 void mDelay_us(unsigned long  us);
+void mStopSensors();
 
 extern uint8_t devID[];
 extern uint16_t mRFsetup;

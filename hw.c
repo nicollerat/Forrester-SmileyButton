@@ -67,6 +67,14 @@ uint16_t hwReadVoltage()
     return v;
 }
 
+// Redémarre le logiciel
+void hwReset()
+{
+    // Compte sur le watchdog pour redémarrer
+   PMMCTL0 |= PMMSWPOR;
+}
+
+
 void hwBackground()
 {
     while (hwFlagP2Interrupt) {
@@ -80,6 +88,7 @@ void hwBackground()
     // Test du bouton
     if ((P5IN & 0x10) ==0) {
         hwDebLedOn(4);
+        hwReset();
     } else {
         hwDebLedOff(4);
     }
@@ -325,6 +334,12 @@ void hwBlinkLed(int mask)
     hwTimerStart(); // Le timer gère les LEDs
 }
 
+void hwStartTimerForever()
+{
+    hwLedFlashState=99;
+    hwTimerStart(); // Le timer gère les LEDs
+}
+
 void hwSetLedFlash(int mask)
 {
     hwLedON |= mask;
@@ -357,6 +372,10 @@ bool hwLedTick()
         hwClearLed( LED_ALL);
         hwTimerStop();
         ret=true;
+        break;
+
+    case 99: // rien, laisse tourner le timer
+        WDT_A_resetTimer(WDT_A_BASE);
         break;
     }
     return ret;
@@ -431,6 +450,16 @@ __interrupt void TIMER0_B0_ISR (void)
 
 }
 
+int hwWatchdogCnt=0;
+// Interrupt du watchdog utilisé pour tester le bouton en mode veille
+#pragma vector = WDT_VECTOR
+__interrupt void WDT_ISR(void)
+{
+    hwWatchdogCnt++;
+    __bic_SR_register_on_exit(CPUOFF);
+}
+
+
 int hwTrapCnt=0;
 int hwUNMICnt=0;
 int hwSYSNMICnt=0;
@@ -462,3 +491,4 @@ __interrupt void TrapIsr(void)
 // flag
     hwTrapCnt++;
 }
+

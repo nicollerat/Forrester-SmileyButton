@@ -135,7 +135,7 @@ void nrfSendData()
     return;
 #endif
 
-    hwDebLedOn(1);
+//    hwDebLedOn(1);
 
     int t;
     uint8_t data[32];
@@ -231,7 +231,7 @@ void nrfSendData()
     } else {
         mSending=true;
     }
-    hwDebLedOff(1);
+//    hwDebLedOff(1);
 }
 
 int nrfResendCounter=0;

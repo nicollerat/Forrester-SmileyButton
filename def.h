@@ -32,8 +32,8 @@
 #define MAX_VERSION 4
 #define MID_VERSION 5
 
-//#define DEFAULT_RF_VERSION EU_VERSION
-#define DEFAULT_RF_VERSION US_VERSION
+#define DEFAULT_RF_VERSION EU_VERSION
+//#define DEFAULT_RF_VERSION US_VERSION
 
 // Canaux de base pour les régions
     // Formule CH=(freq/2 -422.4)*10

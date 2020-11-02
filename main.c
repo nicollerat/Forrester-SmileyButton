@@ -30,18 +30,39 @@ int16_t mBatVoltage=0;
 volatile int timer=0;
 bool mSensorStopped=false;
 
+struct I2C_HANDLE I2C_LEFT;
+struct I2C_HANDLE I2C_MID;
+struct I2C_HANDLE I2C_RIGHT;
+
 /* Tick est utilisé pour éteindre les LEDs
  *   TODO utilise pour de plus amples tâches ?
  */
 void mTick()
 {
+    hwDebLedOn(1);
     timer++;
     hwLedTick();
+    hwDebLedOff(1);
 }
 
 void mStopSensors()
 {
+    si115x_Stop(&I2C_MID);
+    si115x_Stop(&I2C_LEFT);
+    si115x_Stop(&I2C_RIGHT);
 
+    // Utilise le watchdog comme timer pour tester le bouton
+    WDT_A_hold(WDT_A_BASE);
+
+    // Set Timer bit
+    uint8_t newWDTStatus = (WDTCTL & 0x00FF) | WDTTMSEL;
+
+    WDTCTL = WDTPW + newWDTStatus;
+    WDT_A_start(WDT_A_BASE);
+
+    SFRIE1 |= WDTIE;
+
+    //hwStartTimerForever();
 }
 
 // En même temps que le FLASH, on envoie un message
@@ -62,9 +83,6 @@ void mDelay_us(unsigned long us)
     }
 }
 
-struct I2C_HANDLE I2C_LEFT;
-struct I2C_HANDLE I2C_MID;
-struct I2C_HANDLE I2C_RIGHT;
 
 int main(void) {
 

@@ -223,3 +223,9 @@ void si115x_handler(HANDLE *si115x_handle, SI115X_SAMPLES *samples)
     }
 }
 
+void si115x_Stop(HANDLE *si115x_handle)
+{
+//    Si115xWriteToRegister( si115x_handle, SI115x_REG_COMMAND, CMD_PAUSE_CH);
+    Si115xWriteToRegister( si115x_handle, SI115x_REG_COMMAND, CMD_RESET);
+
+}
