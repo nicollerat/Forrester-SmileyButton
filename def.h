@@ -11,6 +11,8 @@
  *      0.1   MN    28.08.20   Première série de 20 pièces
  *
  *      0.2   MN    13.10.20   Première série 50 pièces, 2 flash et pas d'allumage avant.
+ *
+ *      0.3   MN    02.11.20   Ajoute de la fonction d'arrêt
  */
 
 #ifndef DEF_H_
@@ -52,7 +54,7 @@
 #define POWER_BYTE_MID    0x0A // 6 dBm
 #define POWER_BYTE_HIGH   0x0E // 10 dBm
 
-#define DEV_ID         {21,0,200,85}
+#define DEV_ID         {0,0,200,85}
 
 #define LOCK_MIN_SEC    2 // secondes
 
