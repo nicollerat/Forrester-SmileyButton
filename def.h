@@ -13,6 +13,8 @@
  *      0.2   MN    13.10.20   Première série 50 pièces, 2 flash et pas d'allumage avant.
  *
  *      0.3   MN    02.11.20   Ajoute de la fonction d'arrêt
+ *
+ *      0.4   MN    12.02.20   Delais de 10s au lieu de 2s
  */
 
 #ifndef DEF_H_
@@ -34,8 +36,8 @@
 #define MAX_VERSION 4
 #define MID_VERSION 5
 
-#define DEFAULT_RF_VERSION EU_VERSION
-//#define DEFAULT_RF_VERSION US_VERSION
+//#define DEFAULT_RF_VERSION EU_VERSION
+#define DEFAULT_RF_VERSION US_VERSION
 
 // Canaux de base pour les régions
     // Formule CH=(freq/2 -422.4)*10
@@ -62,7 +64,7 @@
 #define LOCK_MAX_SEC    (10*60)
 #define PROG_MAX_DELAY  (5*TICK_PER_SECOND) // s après on prend le setup du temps
 
-#define DEFAULT_LOCK_SEC    2 // seconds, default button lock time
+#define DEFAULT_LOCK_SEC   10 // seconds, default button lock time
 #define PROG_BLANKING   10 // Temps de blocage après programmation
 #define PROG_MIN_TIME   (2*TICK_PER_SECOND)
 #define PROG_MAX_TIME   (10*60*TICK_PER_SECOND)
