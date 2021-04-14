@@ -80,14 +80,18 @@ bool progWaitButtonReleased=false;
 
 // Traite les boutons pour définir le temps de blocage
 //   Retourne vrai quand le temps est défini
+//   Le compteur est incrémenté lorsque rien ne change, ce qui signifie
+//   a la procédure appelante que le setup est abandonné
 bool progContinueSetTime(bool bG, bool bM, bool bD)
 {
     bool ret=false;
 
     if (progWaitButtonReleased) {
         if (!bG && !bM && !bD) {
+            progCounter=0;
             progWaitButtonReleased=false;
         } else {
+            progCounter++;
             return false;
         }
     }
@@ -310,22 +314,37 @@ bool progHandleButtonState(bool BG, bool BM, bool BD)
     case psCheckForStop:
         if (BD) {
             progCounter++;
+            if (progCounter>=PROG_ENTER_HIGH) {
+               progState=psNone;
+               hwBlinkLed(LED_ALL);
+               hwDebLedOff(7);
+           }
         } else {
             progState=psNone;
             if (progCounter>PROG_ENTER_LOW && progCounter<PROG_ENTER_HIGH) {
                 mStopSensors();
                 progState = psNone;
-                progCounter=0;
+                hwSetLed(LED_YELLOW);
                 hwClearLed(LED_RED);
+                mDelay_us(10000);
+                hwClearLed(LED_YELLOW);
             } else {
                 hwBlinkLed(LED_ALL);
             }
+            progCounter=0;
         }
         break;
 
     case psWaitSetTime:
         if (!BM && !BG && !BD) {
             progState=psSetTime;
+        } else {
+            progCounter++;
+            if (progCounter>=PROG_MAX_DELAY) {
+                progState=psNone;
+                hwDebLedOff(7);
+                hwClearLed(LED_ALL);
+            }
         }
         break;
 
@@ -351,6 +370,11 @@ bool progHandleButtonState(bool BG, bool BM, bool BD)
     case psWaitToShowCurrentFreq:
         if (BG) {
             progCounter++;
+            if (progCounter>=PROG_MAX_DELAY) {
+                progState=psNone;
+                hwDebLedOff(7);
+                hwClearLed(LED_ALL);
+            }
         } else {
             hwClearLed(LED_GREEN);
             if (progCounter>=PROG_ENTER_LOW && progCounter<PROG_ENTER_HIGH) {

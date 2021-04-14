@@ -43,8 +43,8 @@
 #define MAX_VERSION 4
 #define MID_VERSION 5
 
-//#define DEFAULT_RF_VERSION EU_VERSION
-#define DEFAULT_RF_VERSION US_VERSION
+#define DEFAULT_RF_VERSION EU_VERSION
+//#define DEFAULT_RF_VERSION US_VERSION
 
 // Canaux de base pour les régions
     // Formule CH=(freq/2 -422.4)*10
@@ -82,7 +82,7 @@
 #define NB_SUCCESSIVE   (1) // nombre de mesure identique successives pour prendre un vote
 #define RESEND_TIME     (10 * TICK_PER_SECOND) // Temps entre les envois (1/2 s)
 
-#define MIN_OVERRIDE    (30) // Prend le min=valeur après ce nombre de fois sans corriger le min
+#define MIN_OVERRIDE    (30 * TICK_PER_SECOND) // Prend le min=valeur après ce nombre de fois sans corriger le min
 #define MAX_TIME_LED_ON (10*TICK_PER_SECOND)
 
 #define USE_SPI         // Ne pénalise pas la conso si pas d'envoi

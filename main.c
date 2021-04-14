@@ -282,6 +282,7 @@ void mHandleResult()
         } else if (isProgramming) {
             mBlankingCounter=PROG_BLANKING;
             isProgramming=false;
+            hwClearLed(LED_ALL);
         }
 
         // Variantes d'implémentation
