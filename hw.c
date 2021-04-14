@@ -74,6 +74,7 @@ void hwReset()
    PMMCTL0 |= PMMSWPOR;
 }
 
+uint16_t buttonCount = 0;
 
 void hwBackground()
 {
@@ -85,12 +86,22 @@ void hwBackground()
         __bis_SR_register(GIE);
     }
 
-    // Test du bouton
-    if ((P5IN & 0x10) ==0) {
-        hwDebLedOn(4);
-        hwReset();
-    } else {
-        hwDebLedOff(4);
+    if (smileyMode==mode_OFF) {
+        // Test du bouton
+        if ((P5IN & 0x10) ==0) {
+            hwDebLedOn(4);
+            buttonCount++;
+        } else {
+            if (buttonCount>5) {
+                // Mise en marche normale
+                mStartNormal();
+            } else if (buttonCount>2) {
+                // Mise en marche test
+                mStartTest();
+            }
+            buttonCount=0;
+            hwDebLedOff(4);
+        }
     }
 }
 

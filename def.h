@@ -14,7 +14,14 @@
  *
  *      0.3   MN    02.11.20   Ajoute de la fonction d'arrêt
  *
- *      0.4   MN    12.02.20   Delais de 10s au lieu de 2s
+ *      0.4   MN    12.02.21   Delais de 10s au lieu de 2s
+ *
+ *      0.5   MN    09.04.21   Ajout procédure de test
+ *                      Le test du bouton dans hwBackground passe par un compteur de temps
+ *                            On attend qu'il soit relâché, si entre 2 et 5s, on met en test
+ *                            si on a plus que 5s, on démarre normalement
+ *
+ *                      En test, le temps de bloquage est réduit au minimum, on s'arrête après 30s
  */
 
 #ifndef DEF_H_

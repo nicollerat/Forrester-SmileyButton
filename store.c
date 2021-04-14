@@ -8,18 +8,20 @@
 #include "store.h"
 #include <driverlib.h>
 #include "main.h"
+#include "def.h"
 
 #define MAGIC 0x4256
 
-typedef struct {
-    uint16_t RFsetup;
-    uint16_t LockTime;
-    uint16_t magic;
-} tSetup;
+
 
 #pragma SET_DATA_SECTION(".fram_vars")
 
-tSetup setupData;
+// Initialize the FRAM structure with the default values
+tSetup setupData = {
+     .RFsetup = DEFAULT_RF_VERSION,
+     .LockTime = DEFAULT_LOCK_SEC * TICK_PER_SECOND,
+     .magic = MAGIC
+};
 
 void storeInit()
 {

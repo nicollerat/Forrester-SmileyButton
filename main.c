@@ -13,6 +13,7 @@
 #include "buttons.h"
 #include "prog.h"
 #include "store.h"
+#include "main.h"
 
 
 #pragma SET_DATA_SECTION(".fram_vars")
@@ -30,6 +31,13 @@ int16_t mBatVoltage=0;
 volatile int timer=0;
 bool mSensorStopped=false;
 
+// Periode de mesure
+int mMeasPeriod_10ms = 50;
+int mTurnOffDelay_10ms = 3000;
+
+// Keep the current mode of the Smiley
+tSmileyMode smileyMode = mode_TEST;
+
 struct I2C_HANDLE I2C_LEFT;
 struct I2C_HANDLE I2C_MID;
 struct I2C_HANDLE I2C_RIGHT;
@@ -45,6 +53,9 @@ void mTick()
     hwDebLedOff(1);
 }
 
+/* Stoppe les capteurs et programme le watchdog pour qu'il soit un timer
+ *      La smiley peut fonctionne en basse conso dans ce mode
+ */
 void mStopSensors()
 {
     si115x_Stop(&I2C_MID);
@@ -55,15 +66,60 @@ void mStopSensors()
     WDT_A_hold(WDT_A_BASE);
 
     // Set Timer bit
-    uint8_t newWDTStatus = (WDTCTL & 0x00FF) | WDTTMSEL;
+    WDTCTL = WDTPW | WDT_A_CLOCKDIVIDER_8192 | WDTTMSEL | WDT_A_CLOCKSOURCE_VLOCLK;
 
-    WDTCTL = WDTPW + newWDTStatus;
     WDT_A_start(WDT_A_BASE);
 
+    // Valide l'interruption du watchdog
     SFRIE1 |= WDTIE;
 
-    //hwStartTimerForever();
+    smileyMode = mode_OFF;
 }
+
+/* Redémarre les capteur est supprime le mode timer du watchdog
+ *      Retour au fonctionnement normal
+ */
+void mStartSensors()
+{
+
+    // Utilise le watchdog comme timer pour tester le bouton
+    WDT_A_hold(WDT_A_BASE);
+
+    // Clear Timer bit
+    WDTCTL = WDTPW | WDT_A_CLOCKDIVIDER_32K | WDT_A_CLOCKSOURCE_VLOCLK;
+
+    WDT_A_start(WDT_A_BASE);
+
+    SFRIE1 &= ~WDTIE;
+
+    si115x_Start(&I2C_MID);
+    si115x_Start(&I2C_LEFT);
+    si115x_Start(&I2C_RIGHT);
+
+    GPIO_clearInterrupt( GPIO_PORT_P2, 0xFFFF);
+}
+
+// Démarre les capteurs et programme le temps de blocage normal
+void mStartNormal()
+{
+    hwSetLed(LED_GREEN);
+    mLockTime = setupData.LockTime;
+    mStartSensors();
+    mTurnOffDelay_10ms = -1;
+    hwClearLed(LED_GREEN);
+    smileyMode = mode_NORMAL;
+}
+
+void mStartTest()
+{
+    hwSetLed(LED_RED);
+    mLockTime = 0;
+    mStartSensors();
+    mTurnOffDelay_10ms= 3000 * 3; // As there are 3 sensors, time is decremented 3 times faster
+    hwClearLed(LED_RED);
+    smileyMode = mode_TEST;
+}
+
 
 // En même temps que le FLASH, on envoie un message
 void mButtonPressed(uint8_t mask)
@@ -125,12 +181,12 @@ int main(void) {
 
     switch(CONFIG_CHIP) {
     case SINGLE_CHIP:
-        si115x_init_3CH(&I2C_MID);
+        mMeasPeriod_10ms = si115x_init_3CH(&I2C_MID);
         Si115xStart(&I2C_MID);
         break;
 
     case MULTI_CHIP:
-        si115x_init_1CH(&I2C_MID);
+        mMeasPeriod_10ms = si115x_init_1CH(&I2C_MID) ;
         si115x_init_1CH(&I2C_RIGHT);
         si115x_init_1CH(&I2C_LEFT);
 
@@ -148,9 +204,12 @@ int main(void) {
 
     hwClearLed(LED_GREEN+LED_RED);
 
+    // Load dead time and RF setup
     storeInit();
 
     hwDebLedOff(7);
+
+    mStartTest();
 
     // Test conso avant démarrage
     //   LA CONSO EST ELEVEE ICI... L'INTERRUPT DOIT ÊTRE ACTIVE
@@ -168,15 +227,16 @@ int main(void) {
             }
             WDT_A_resetTimer(WDT_A_BASE);
             hwBackground();
+
+            // Test le délais d'extinction
+            if (mTurnOffDelay_10ms>0) {
+                mTurnOffDelay_10ms -= mMeasPeriod_10ms;
+                if (mTurnOffDelay_10ms<=0) {
+                    mStopSensors();
+                }
+            }
     }
-//    {
-//        hwSendI2C(I2C_LEFT, transmitData, 2);
-//
-//        GPIO_setOutputHighOnPin(
-//                GPIO_PORT_P1,
-//                GPIO_PIN0
-//            );
-//    }
+
 }
 
 // Mesures faites par un des capteurs

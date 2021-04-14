@@ -15,7 +15,12 @@ void mTick();
 void mSi115xHandler(int src);
 void mDelay_us(unsigned long  us);
 void mStopSensors();
+void mStartTest();
+void mStartNormal();
 
+typedef enum { mode_TEST, mode_NORMAL, mode_OFF } tSmileyMode;
+
+extern tSmileyMode smileyMode;
 extern uint8_t devID[];
 extern uint16_t mRFsetup;
 extern bool mSending;

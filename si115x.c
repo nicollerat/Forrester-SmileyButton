@@ -16,9 +16,11 @@
  uint8_t devREVID=0;
  uint8_t devResp0=0;
 
+ // Retourne la période de mesure en 1/100 de seconde
 int16_t si115x_init_3CH( HANDLE*si115x_handle )
 {
     int16_t    retval;
+    int16_t    measPeriod=10;
 
     // Vu sur l'analyse de la démo
     Si115xWriteToRegister(si115x_handle, SI115x_REG_COMMAND, CMD_PAUSE_CH);
@@ -65,38 +67,46 @@ int16_t si115x_init_3CH( HANDLE*si115x_handle )
     switch(5) {
     case 1: // Rapide 20ms
         retval += Si115xParamSet(si115x_handle, PARAM_MEASRATE_L, 0x19);
+        measPeriod=2;
         break;
 
 
     case 2: // moyen 100ms
         retval += Si115xParamSet(si115x_handle, PARAM_MEASRATE_L, 0xFA);
+        measPeriod=10;
         break;
 
     case 3: // moyen 250ms
         retval += Si115xParamSet( si115x_handle, PARAM_MEASRATE_H, 0x01);
         retval += Si115xParamSet( si115x_handle, PARAM_MEASRATE_L, 0x38);
+        measPeriod=25;
         break;
 
     case 4: // Lent 500ms
         retval += Si115xParamSet( si115x_handle, PARAM_MEASRATE_H, 0x02);
         retval += Si115xParamSet( si115x_handle, PARAM_MEASRATE_L, 0x71);
+        measPeriod=50;
         break;
 
     case 5: // Très lent 1s
         retval += Si115xParamSet( si115x_handle, PARAM_MEASRATE_H, 0x04);
         retval += Si115xParamSet( si115x_handle, PARAM_MEASRATE_L, 0xe2);
+        measPeriod=100;
+        break;
     }
 
     retval += Si115xWriteToRegister(si115x_handle, SI115x_REG_IRQ_ENABLE, 0x07);
 
 
-    return retval;
+    return measPeriod;
 }
 
 // Initialise le capteur pour un seul canal
+//   return the meas period in 1/100s
 int16_t si115x_init_1CH( HANDLE*si115x_handle )
 {
     int16_t    retval;
+    int16_t measPeriod=100;
 
     // Vu sur l'analyse de la démo
     int16_t res=Si115xWriteToRegister(si115x_handle, SI115x_REG_COMMAND, CMD_PAUSE_CH);
@@ -144,31 +154,37 @@ int16_t si115x_init_1CH( HANDLE*si115x_handle )
     switch(4) {
      case 1: // Rapide 20ms
          retval += Si115xParamSet(si115x_handle, PARAM_MEASRATE_L, 0x19);
+         measPeriod=2;
          break;
 
 
      case 2: // moyen 100ms
          retval += Si115xParamSet(si115x_handle, PARAM_MEASRATE_L, 0xFA);
+         measPeriod=10;
          break;
 
      case 3: // moyen 250ms
          retval += Si115xParamSet( si115x_handle, PARAM_MEASRATE_H, 0x01);
          retval += Si115xParamSet( si115x_handle, PARAM_MEASRATE_L, 0x38);
+         measPeriod=25;
          break;
 
      case 4: // Lent 500ms
          retval += Si115xParamSet( si115x_handle, PARAM_MEASRATE_H, 0x02);
          retval += Si115xParamSet( si115x_handle, PARAM_MEASRATE_L, 0x71);
+         measPeriod=50;
          break;
 
      case 5: // Très lent 1s
          retval += Si115xParamSet( si115x_handle, PARAM_MEASRATE_H, 0x04);
          retval += Si115xParamSet( si115x_handle, PARAM_MEASRATE_L, 0xe2);
+         measPeriod=100;
+         break;
      }
 
     retval += Si115xWriteToRegister( si115x_handle, SI115x_REG_IRQ_ENABLE, 0x01);
 
-    return retval;
+    return measPeriod;
 }
 
 
@@ -225,7 +241,21 @@ void si115x_handler(HANDLE *si115x_handle, SI115X_SAMPLES *samples)
 
 void si115x_Stop(HANDLE *si115x_handle)
 {
-//    Si115xWriteToRegister( si115x_handle, SI115x_REG_COMMAND, CMD_PAUSE_CH);
-    Si115xWriteToRegister( si115x_handle, SI115x_REG_COMMAND, CMD_RESET);
+    // TODO MN should pause the chip
+    Si115xWriteToRegister( si115x_handle, SI115x_REG_COMMAND, CMD_PAUSE_CH);
+//    Si115xWriteToRegister( si115x_handle, SI115x_REG_COMMAND, CMD_RESET);
 
+}
+
+/* Restart sensor
+ *  Clear the status and restart
+ */
+void si115x_Start(HANDLE *si115x_handle)
+{
+    uint8_t buffer[10];
+    Si115xBlockRead( si115x_handle,
+                             SI115x_REG_IRQ_STATUS,
+                             3,
+                             buffer);
+    Si115xStart(si115x_handle);
 }

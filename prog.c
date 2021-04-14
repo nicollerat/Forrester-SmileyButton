@@ -314,6 +314,8 @@ bool progHandleButtonState(bool BG, bool BM, bool BD)
             progState=psNone;
             if (progCounter>PROG_ENTER_LOW && progCounter<PROG_ENTER_HIGH) {
                 mStopSensors();
+                progState = psNone;
+                progCounter=0;
                 hwClearLed(LED_RED);
             } else {
                 hwBlinkLed(LED_ALL);
