@@ -58,6 +58,7 @@ void mTick()
  */
 void mStopSensors()
 {
+
     si115x_Stop(&I2C_MID);
     si115x_Stop(&I2C_LEFT);
     si115x_Stop(&I2C_RIGHT);
@@ -74,6 +75,7 @@ void mStopSensors()
     SFRIE1 |= WDTIE;
 
     smileyMode = mode_OFF;
+    hwClearLed(LED_ALL);
 }
 
 /* Redémarre les capteur est supprime le mode timer du watchdog
@@ -230,6 +232,9 @@ int main(void) {
 
             // Test le délais d'extinction
             if (mTurnOffDelay_10ms>0) {
+                if (mTurnOffDelay_10ms<=3*mMeasPeriod_10ms) {
+                    hwSetLed(LED_ALL);
+                }
                 mTurnOffDelay_10ms -= mMeasPeriod_10ms;
                 if (mTurnOffDelay_10ms<=0) {
                     mStopSensors();
