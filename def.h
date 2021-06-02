@@ -24,6 +24,7 @@
  *                      En test, le temps de bloquage est réduit au minimum, on s'arrête après 30s
  *
  *      0.6   MN    26.05.21 Flash des LEDs à la fin de la période
+                        Correction programmation fréquence
  */
 
 #ifndef DEF_H_
@@ -45,8 +46,8 @@
 #define MAX_VERSION 4
 #define MID_VERSION 5
 
-//#define DEFAULT_RF_VERSION EU_VERSION
-#define DEFAULT_RF_VERSION US_VERSION
+#define DEFAULT_RF_VERSION EU_VERSION
+//#define DEFAULT_RF_VERSION US_VERSION
 
 // Canaux de base pour les régions
     // Formule CH=(freq/2 -422.4)*10

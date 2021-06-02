@@ -370,7 +370,7 @@ bool progHandleButtonState(bool BG, bool BM, bool BD)
     case psWaitToShowCurrentFreq:
         if (BG) {
             progCounter++;
-            if (progCounter>=PROG_MAX_DELAY) {
+            if (progCounter>=PROG_ENTER_HIGH) {
                 progState=psNone;
                 hwDebLedOff(7);
                 hwClearLed(LED_ALL);
