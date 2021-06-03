@@ -31,9 +31,13 @@ int16_t mBatVoltage=0;
 volatile int timer=0;
 bool mSensorStopped=false;
 
+#define TEST_DELAY (3000 * 3)
+
 // Periode de mesure
 int mMeasPeriod_10ms = 50;
-int mTurnOffDelay_10ms = 3000;
+int mTurnOffDelay_10ms = TEST_DELAY;
+
+bool isProgramming = false;
 
 // Keep the current mode of the Smiley
 tSmileyMode smileyMode = mode_TEST;
@@ -105,7 +109,6 @@ void mStartSensors()
 void mStartNormal()
 {
     hwSetLed(LED_GREEN);
-    mLockTime = setupData.LockTime;
     mStartSensors();
     mTurnOffDelay_10ms = -1;
     hwClearLed(LED_GREEN);
@@ -115,9 +118,8 @@ void mStartNormal()
 void mStartTest()
 {
     hwSetLed(LED_RED);
-    mLockTime = 0;
     mStartSensors();
-    mTurnOffDelay_10ms= 3000 * 3; // As there are 3 sensors, time is decremented 3 times faster
+    mTurnOffDelay_10ms= TEST_DELAY; // As there are 3 sensors, time is decremented 3 times faster
     hwClearLed(LED_RED);
     smileyMode = mode_TEST;
 }
@@ -231,13 +233,18 @@ int main(void) {
             hwBackground();
 
             // Test le délais d'extinction
-            if (mTurnOffDelay_10ms>0) {
-                if (mTurnOffDelay_10ms<=3*mMeasPeriod_10ms) {
-                    hwSetLed(LED_ALL);
-                }
-                mTurnOffDelay_10ms -= mMeasPeriod_10ms;
-                if (mTurnOffDelay_10ms<=0) {
-                    mStopSensors();
+            if (isProgramming) {
+                // Reset the delay
+                if (mTurnOffDelay_10ms>0) mTurnOffDelay_10ms=TEST_DELAY;
+            } else {
+                if (mTurnOffDelay_10ms>0) {
+                    if (mTurnOffDelay_10ms<=3*mMeasPeriod_10ms) {
+                        hwSetLed(LED_ALL);
+                    }
+                    mTurnOffDelay_10ms -= mMeasPeriod_10ms;
+                    if (mTurnOffDelay_10ms<=0) {
+                        mStopSensors();
+                    }
                 }
             }
     }
@@ -270,10 +277,10 @@ void mHandleResult()
     int nbLedsOn=0;
     static int lastLED = 0;
     static int LedOnCount = 0; // Limite le temps ON
-    static bool isProgramming = false;
+
 
     // Test du blocage
-    if (mBlankingCounter) {
+    if (mBlankingCounter && (smileyMode == mode_NORMAL)) {
         mBlankingCounter--;
     } else {
 
@@ -285,7 +292,11 @@ void mHandleResult()
             isProgramming=true;
             return;
         } else if (isProgramming) {
-            mBlankingCounter=PROG_BLANKING;
+            if (mTurnOffDelay_10ms>0) {
+                mBlankingCounter=0;
+            } else {
+                mBlankingCounter=PROG_BLANKING;
+            }
             isProgramming=false;
             hwClearLed(LED_ALL);
         }

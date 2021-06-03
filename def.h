@@ -25,6 +25,10 @@
  *
  *      0.6   MN    26.05.21 Flash des LEDs à la fin de la période
                         Correction programmation fréquence
+
+        0.7   MN    03.06.21 Permet la programmation en mode test
+                            Le temps est suspendu pendant que le mode prog est actif
+                            Le délais de mise en arrêt est redémarré à la fin
  */
 
 #ifndef DEF_H_
