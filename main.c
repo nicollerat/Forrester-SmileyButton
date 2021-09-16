@@ -270,6 +270,8 @@ void mHandleResult()
     const uint16_t thrSET = 20*nbMeas; // Seuil dépend de la puissance de la LED et des distances désirées.
     const uint16_t thrCLEAR = 10*nbMeas;
     const uint16_t thrPROG = 20*nbMeas;
+    const uint16_t thrOffsetChange = 5 * nbMeas;
+
 
     // Les 3 canaux donnent les résultat dans l'ordre centre, droite, gauche
     static uint16_t thr = thrSET;
@@ -302,7 +304,7 @@ void mHandleResult()
         }
 
         // Variantes d'implémentation
-        switch(2) {
+        switch(3) {
         case 1: // Différence entre les boutons
             // Canal 1 (centre)
             if (samples_all.ch0>samples_all.ch1 && samples_all.ch0>samples_all.ch2) {
@@ -330,7 +332,7 @@ void mHandleResult()
             }
             break;
 
-        case 2: // Valeurs absolues
+        case 2: // Valeurs absolues VARIANTE DE LA PREMIèRE SERIE
             // Canal 1 (centre)
                 if (samples_all.ch0>thr) {
                     currentLED|=LED_YELLOW;
@@ -348,6 +350,36 @@ void mHandleResult()
 
                 if (samples_all.ch2>thr) {
                     currentLED|=LED_GREEN;
+                    nbLedsOn++;
+                } else {
+                    hwClearLed(LED_GREEN);
+                }
+                break;
+
+        case 3: // Valeurs absolues, compte les leds qui ont un offset changé
+            // Canal 1 (centre)
+                if (samples_all.ch0>thr) {
+                    currentLED|=LED_YELLOW;
+                    nbLedsOn++;
+                } else if (samples_all.ch0>thrOffsetChange) {
+                    nbLedsOn++;
+                } else {
+                    hwClearLed(LED_YELLOW);
+                }
+
+                if (samples_all.ch1>thr) {
+                    currentLED|=LED_RED;
+                    nbLedsOn++;
+                } else if (samples_all.ch1>thrOffsetChange) {
+                    nbLedsOn++;
+                } else {
+                    hwClearLed(LED_RED);
+                }
+
+                if (samples_all.ch2>thr) {
+                    currentLED|=LED_GREEN;
+                    nbLedsOn++;
+                } else if (samples_all.ch2>thrOffsetChange) {
                     nbLedsOn++;
                 } else {
                     hwClearLed(LED_GREEN);

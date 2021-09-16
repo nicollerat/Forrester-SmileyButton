@@ -29,6 +29,10 @@
         0.7   MN    03.06.21 Permet la programmation en mode test
                             Le temps est suspendu pendant que le mode prog est actif
                             Le délais de mise en arrêt est redémarré à la fin
+
+        0.8   MN    16.09.21 Ajout d'un critère pour la détection basé sur l'évolution commune de l'offset
+                             Permet d'éviter les déclenchements impromptus de votes lors de l'allumage de la lumière
+
  */
 
 #ifndef DEF_H_
