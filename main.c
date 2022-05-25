@@ -251,6 +251,27 @@ int main(void) {
 
 }
 
+int mBlankingCounter = 0;
+
+// Traite une pression de bouton
+void mAcceptButton(int button)
+{
+    mButtonPressed(button);
+    hwFlashLed(button);
+    mBlankingCounter=mLockTime;
+}
+
+void mPushButtonHandler(int button)
+{
+    if (mBlankingCounter && (smileyMode == mode_NORMAL)) {
+        mBlankingCounter--;
+    } else {
+        if (smileyMode != mode_OFF) {
+            mAcceptButton(button);
+        }
+    }
+}
+
 // Mesures faites par un des capteurs
 SI115X_SAMPLES samples_left = {.min=0xFFFF};
 SI115X_SAMPLES samples_mid = {.min=0xFFFF};
@@ -258,16 +279,15 @@ SI115X_SAMPLES samples_right = {.min=0xFFFF};
 
 SI115X_SAMPLES samples_all;
 
-int mBlankingCounter = 0;
 
 
 // Traite les résultats obtenus pour allumer les LEDs
 //   On détermine quel bouton est le plus probablement pressé
 //   Sert de base temps, car la période est régulière.
-void mHandleResult()
+void mHandleSiResult()
 {
     const uint16_t nbMeas = 1; // Ajuster selon le setup du chip
-    const uint16_t thrSET = 50*nbMeas; // Seuil dépend de la puissance de la LED et des distances désirées.
+    const uint16_t thrSET = 60*nbMeas; // Seuil dépend de la puissance de la LED et des distances désirées.
     const uint16_t thrCLEAR = 10*nbMeas;
     const uint16_t thrPROG = 50*nbMeas;
     const uint16_t thrOffsetChange = 5 * nbMeas;
@@ -387,6 +407,8 @@ void mHandleResult()
                 break;
         }
 
+
+
         // Si on a un bouton pressé, on traite le moment où un vote est envoyé
         if (currentLED && nbLedsOn==1) { // Un seul bouton détecte
             // pour ne pas allumer tout de suite hwSetLed(currentLED);
@@ -401,11 +423,10 @@ void mHandleResult()
 #endif
                 if (mDetectCount==nb_succ) {
                     // Plus de bouton, on accepte le dernier pressé et on fait un FLASH
-                    mButtonPressed(lastLED);
-                    hwFlashLed(lastLED);
-                    lastLED=0;
-                    mBlankingCounter=mLockTime;
+                    mAcceptButton(lastLED);
+
                     mDetectCount=0;
+                    lastLED=0;
                 }
             } else {
                 mDetectCount=0;
@@ -463,7 +484,7 @@ void mTrakMin(SI115X_SAMPLES * sample)
 
 /* Traite une interruption
  *    Lit les capteurs qui ont fait une interruption
- *    Selon les valeurs mesurées, allume les LEDs
+ *    Selon les valeurs mesurées, allume les LEDs (appel à mHandleResult)
  */
 void mSi115xHandler(int src)
 {
@@ -479,7 +500,7 @@ void mSi115xHandler(int src)
 
 
         if (CONFIG_CHIP==SINGLE_CHIP) {
-            mHandleResult();
+            mHandleSiResult();
         }
 
         // Traite sur le bouton du milieu pour avoir la cadence 1/mesures
@@ -488,7 +509,7 @@ void mSi115xHandler(int src)
             samples_all.ch0 = samples_mid.ch0 - samples_mid.min;
             samples_all.ch1 = samples_right.ch0 - samples_right.min;
             samples_all.ch2 = samples_left.ch0 - samples_left.min;
-            mHandleResult();
+            mHandleSiResult();
         }
     } // capteur central
 

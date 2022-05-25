@@ -25,6 +25,7 @@
 #endif
 
 uint16_t hwFlagP2Interrupt = 0;
+uint16_t hwFlagP4Interrupt = 0;
 
 
 void hwInitAD()
@@ -83,6 +84,20 @@ void hwBackground()
         mSi115xHandler(src);
         __bic_SR_register(GIE);
         hwFlagP2Interrupt &= ~src;
+        __bis_SR_register(GIE);
+    }
+
+    if (hwFlagP4Interrupt) {
+        uint16_t src=hwFlagP4Interrupt;
+        uint16_t button = 0;
+        if (src & GPIO_PIN4) button |= LED_GREEN;
+        if (src & GPIO_PIN5) button |= LED_YELLOW;
+        if (src & GPIO_PIN0) button |= LED_RED;
+
+        mPushButtonHandler(button);
+
+        __bic_SR_register(GIE);
+        hwFlagP4Interrupt &= ~src;
         __bis_SR_register(GIE);
     }
 
@@ -276,6 +291,12 @@ void hwInit()
    // Bouton power ON
    GPIO_setAsInputPinWithPullUpResistor(GPIO_PORT_P5, GPIO_PIN4);
 
+   // Bouton physiques
+   GPIO_setAsInputPinWithPullUpResistor(GPIO_PORT_P4, GPIO_PIN0+GPIO_PIN4+GPIO_PIN5);
+   GPIO_selectInterruptEdge(GPIO_PORT_P4, GPIO_PIN0+GPIO_PIN4+GPIO_PIN5, GPIO_HIGH_TO_LOW_TRANSITION);
+   GPIO_clearInterrupt( GPIO_PORT_P4, GPIO_PIN0+GPIO_PIN4+GPIO_PIN5);
+   GPIO_enableInterrupt(GPIO_PORT_P4, GPIO_PIN0+GPIO_PIN4+GPIO_PIN5);
+
    // Initialisation d'un timer
    hwTimerInit();
 
@@ -427,6 +448,15 @@ __interrupt void P2_ISR (void)
     __bic_SR_register_on_exit(CPUOFF);
 }
 
+// Traitement des interruptions des capteurs
+#pragma vector=PORT4_VECTOR
+__interrupt void P4_ISR (void)
+{
+    uint16_t src = GPIO_getInterruptStatus(GPIO_PORT_P4, GPIO_PIN0+GPIO_PIN4+GPIO_PIN5);
+    hwFlagP4Interrupt |= src;
+    GPIO_clearInterrupt( GPIO_PORT_P4, src);
+    __bic_SR_register_on_exit(CPUOFF);
+}
 
 //******************************************************************************
 //

@@ -62,7 +62,8 @@ MEMORY
     TLVMEM                  : origin = 0x1A00, length = 0x200
     BOOTCODE                : origin = 0x1C00, length = 0x400
     RAM                     : origin = 0x2000, length = 0x800
-    FRAM                    : origin = 0xC000, length = 0x3F80
+    FRAM                    : origin = 0xC000, length = 0x3F00
+    FRAM_VARS               : origin = 0xFF00, length = 0x80
     ROMLIB                  : origin = 0xFAC00, length = 0x5000
     BSL1                    : origin = 0xFFC00, length = 0x400
     JTAGSIGNATURE           : origin = 0xFF80, length = 0x0004, fill = 0xFFFF
@@ -170,6 +171,7 @@ SECTIONS
     .stack      : {} > RAM (HIGH)           /* Software system stack             */
 
     .tinyram    : {} > TINYRAM              /* Tiny RAM                          */
+    .fram_vars  : {} > FRAM_VARS, type=NOINIT
 
     /* MSP430 INFO memory segments */
     .info : type = NOINIT{} > INFO

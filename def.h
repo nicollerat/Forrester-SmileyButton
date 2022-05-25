@@ -33,6 +33,9 @@
         0.8   MN    16.09.21 Ajout d'un critère pour la détection basé sur l'évolution commune de l'offset
                              Permet d'éviter les déclenchements impromptus de votes lors de l'allumage de la lumière
 
+************************************************************ NOUVEAU HARDWARE
+************************************************************
+        1.0   MN    1.04.22 Première version avec bouttons
  */
 
 #ifndef DEF_H_
@@ -74,7 +77,7 @@
 #define POWER_BYTE_MID    0x0A // 6 dBm
 #define POWER_BYTE_HIGH   0x0E // 10 dBm
 
-#define DEV_ID         {0,0,200,85}
+#define DEV_ID         {120,30,100,85}
 
 #define LOCK_MIN_SEC    2 // secondes
 
