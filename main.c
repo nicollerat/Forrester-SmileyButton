@@ -290,7 +290,7 @@ void mHandleSiResult()
     const uint16_t thrSET = THR_SET*nbMeas; // Seuil dépend de la puissance de la LED et des distances désirées.
     const uint16_t thrCLEAR = 10*nbMeas;
     const uint16_t thrPROG = 50*nbMeas;
-    const uint16_t thrOffsetChange = 5 * nbMeas;
+    const uint16_t thrOffsetChange = THR_OFFSET * nbMeas;
 
 
     // Les 3 canaux donnent les résultat dans l'ordre centre, droite, gauche
@@ -324,7 +324,7 @@ void mHandleSiResult()
         }
 
         // Variantes d'implémentation
-        switch(2) {
+        switch(3) {
         case 1: // Différence entre les boutons
             // Canal 1 (centre)
             if (samples_all.ch0>samples_all.ch1 && samples_all.ch0>samples_all.ch2) {

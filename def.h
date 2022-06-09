@@ -39,6 +39,8 @@
 
         1.1   MN    26.05.22  Arrangements pour les configurations seuil et fréquence à partir de ce fichier def.h
                               légère différence entre les périodes des 3 capteurs pour éviter les votes consécutifs
+
+        1.2   MN    9.6.22  Résurrection de l'algorithme avec le changement d'offset
  */
 
 #ifndef DEF_H_
@@ -87,12 +89,13 @@
 // Define the period
 // can handle 2 and 4. See function si115x_init_1CH()
 #define TICK_PER_SECOND 4
-#define THR_SET         60
+#define THR_SET         40
+#define THR_OFFSET      20
 
 #define LOCK_MAX_SEC    (10*60)
 #define PROG_MAX_DELAY  (5*TICK_PER_SECOND) // s après on prend le setup du temps
 
-#define DEFAULT_LOCK_SEC   10 // seconds, default button lock time
+#define DEFAULT_LOCK_SEC   2 // seconds, default button lock time
 #define PROG_BLANKING   10 // Temps de blocage après programmation
 #define PROG_MIN_TIME   (2*TICK_PER_SECOND)
 #define PROG_MAX_TIME   (10*60*TICK_PER_SECOND)
