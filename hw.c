@@ -7,6 +7,7 @@
 
 #include "driverlib.h"
 #include "hw.h"
+#include "hwuart.h"
 #include "main.h"
 #include "def.h"
 
@@ -307,6 +308,9 @@ void hwInit()
 
    // ADC
    // hwInitAD();
+#if USE_UART==1
+   hwuart_Init();
+#endif
 }
 
 // LED de debug

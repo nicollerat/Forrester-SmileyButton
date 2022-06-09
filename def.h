@@ -90,7 +90,9 @@
 // can handle 2 and 4. See function si115x_init_1CH()
 #define TICK_PER_SECOND 4
 #define THR_SET         40
-#define THR_OFFSET      20
+#define THR_OFFSET      20 // Originally 5
+
+#define USE_UART 1
 
 #define LOCK_MAX_SEC    (10*60)
 #define PROG_MAX_DELAY  (5*TICK_PER_SECOND) // s après on prend le setup du temps

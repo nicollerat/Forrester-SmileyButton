@@ -1,9 +1,10 @@
 #include <driverlib.h>
 #include <stdbool.h>
-
+#include <stdio.h>
 #include "hwi2c.h"
 #include "hw.h"
 #include "hwspi.h"
+#include "hwuart.h"
 
 #include "si115x.h"
 #include "si115x_functions.h"
@@ -292,7 +293,11 @@ void mHandleSiResult()
     const uint16_t thrPROG = 50*nbMeas;
     const uint16_t thrOffsetChange = THR_OFFSET * nbMeas;
 
-
+#if USE_UART==1
+    char str[32];
+    sprintf(str, "%d %d %d %d %d %d\n", samples_left.ch0, samples_mid.ch0, samples_right.ch0, samples_all.ch2, samples_all.ch0, samples_all.ch1);
+    hwuart_Send(str);
+#endif
     // Les 3 canaux donnent les résultat dans l'ordre centre, droite, gauche
     static uint16_t thr = thrSET;
     uint16_t currentLED=0;
