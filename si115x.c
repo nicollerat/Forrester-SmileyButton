@@ -103,7 +103,8 @@ int16_t si115x_init_3CH( HANDLE*si115x_handle )
 
 // Initialise le capteur pour un seul canal
 //   return the meas period in 1/100s
-int16_t si115x_init_1CH( HANDLE*si115x_handle )
+//   timeShift let change the period. Expected to be 0, -1 or 1
+int16_t si115x_init_1CH( HANDLE*si115x_handle, int timeShift )
 {
     int16_t    retval;
     int16_t measPeriod=100;
@@ -151,33 +152,33 @@ int16_t si115x_init_1CH( HANDLE*si115x_handle )
 
     retval += Si115xParamSet( si115x_handle, PARAM_MEASCONFIG0, 0x61);
 
-    switch(4) {
-     case 1: // Rapide 20ms
-         retval += Si115xParamSet(si115x_handle, PARAM_MEASRATE_L, 0x19);
+    switch(TICK_PER_SECOND) {
+     case 50: // Rapide 20ms
+         retval += Si115xParamSet(si115x_handle, PARAM_MEASRATE_L, 0x19+timeShift);
          measPeriod=2;
          break;
 
 
-     case 2: // moyen 100ms
-         retval += Si115xParamSet(si115x_handle, PARAM_MEASRATE_L, 0xFA);
+     case 10: // moyen 100ms
+         retval += Si115xParamSet(si115x_handle, PARAM_MEASRATE_L, 0xFA+timeShift); // 250 ??
          measPeriod=10;
          break;
 
-     case 3: // moyen 250ms
+     case 4: // moyen 250ms
          retval += Si115xParamSet( si115x_handle, PARAM_MEASRATE_H, 0x01);
-         retval += Si115xParamSet( si115x_handle, PARAM_MEASRATE_L, 0x38);
+         retval += Si115xParamSet( si115x_handle, PARAM_MEASRATE_L, 0x38+timeShift);
          measPeriod=25;
          break;
 
-     case 4: // Lent 500ms
+     case 2: // Lent 500ms
          retval += Si115xParamSet( si115x_handle, PARAM_MEASRATE_H, 0x02);
-         retval += Si115xParamSet( si115x_handle, PARAM_MEASRATE_L, 0x71);
+         retval += Si115xParamSet( si115x_handle, PARAM_MEASRATE_L, 0x71+timeShift);
          measPeriod=50;
          break;
 
-     case 5: // Très lent 1s
+     case 1: // Très lent 1s
          retval += Si115xParamSet( si115x_handle, PARAM_MEASRATE_H, 0x04);
-         retval += Si115xParamSet( si115x_handle, PARAM_MEASRATE_L, 0xe2);
+         retval += Si115xParamSet( si115x_handle, PARAM_MEASRATE_L, 0xe2+timeShift);
          measPeriod=100;
          break;
      }

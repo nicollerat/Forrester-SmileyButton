@@ -190,9 +190,9 @@ int main(void) {
         break;
 
     case MULTI_CHIP:
-        mMeasPeriod_10ms = si115x_init_1CH(&I2C_MID) ;
-        si115x_init_1CH(&I2C_RIGHT);
-        si115x_init_1CH(&I2C_LEFT);
+        mMeasPeriod_10ms = si115x_init_1CH(&I2C_MID, 0) ;
+        si115x_init_1CH(&I2C_RIGHT, -1);
+        si115x_init_1CH(&I2C_LEFT, 1);
 
         Si115xStart(&I2C_LEFT);
         Si115xStart(&I2C_MID);
@@ -287,7 +287,7 @@ SI115X_SAMPLES samples_all;
 void mHandleSiResult()
 {
     const uint16_t nbMeas = 1; // Ajuster selon le setup du chip
-    const uint16_t thrSET = 60*nbMeas; // Seuil dépend de la puissance de la LED et des distances désirées.
+    const uint16_t thrSET = THR_SET*nbMeas; // Seuil dépend de la puissance de la LED et des distances désirées.
     const uint16_t thrCLEAR = 10*nbMeas;
     const uint16_t thrPROG = 50*nbMeas;
     const uint16_t thrOffsetChange = 5 * nbMeas;

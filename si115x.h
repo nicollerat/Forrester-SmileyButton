@@ -19,7 +19,7 @@ typedef struct
     uint16_t    nb_min;
 } SI115X_SAMPLES ;
 
-int16_t si115x_init_1CH( HANDLE*si115x_handle );
+int16_t si115x_init_1CH( HANDLE*si115x_handle, int timeShift );
 int16_t si115x_init_3CH( HANDLE*si115x_handle );
 
 void si115x_handler(HANDLE *si115x_handle, SI115X_SAMPLES *samples);
