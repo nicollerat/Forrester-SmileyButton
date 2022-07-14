@@ -41,6 +41,8 @@
                               légère différence entre les périodes des 3 capteurs pour éviter les votes consécutifs
 
         1.2   MN    9.6.22  Résurrection de l'algorithme avec le changement d'offset
+
+        1.3   MN    15.6.22  Algo minimum revu pour tenir compte pic négatif.
  */
 
 #ifndef DEF_H_
@@ -89,7 +91,7 @@
 // Define the period
 // can handle 2 and 4. See function si115x_init_1CH()
 #define TICK_PER_SECOND 4
-#define THR_SET         40
+#define THR_SET         60
 #define THR_OFFSET      20 // Originally 5
 
 #define USE_UART 1

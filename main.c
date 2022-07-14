@@ -288,18 +288,18 @@ SI115X_SAMPLES samples_all;
 void mHandleSiResult()
 {
     const uint16_t nbMeas = 1; // Ajuster selon le setup du chip
-    const uint16_t thrSET = THR_SET*nbMeas; // Seuil dépend de la puissance de la LED et des distances désirées.
-    const uint16_t thrCLEAR = 10*nbMeas;
-    const uint16_t thrPROG = 50*nbMeas;
-    const uint16_t thrOffsetChange = THR_OFFSET * nbMeas;
+    const int16_t thrSET = THR_SET*nbMeas; // Seuil dépend de la puissance de la LED et des distances désirées.
+    const int16_t thrCLEAR = 10*nbMeas;
+    const int16_t thrPROG = 50*nbMeas;
+    const int16_t thrOffsetChange = THR_OFFSET * nbMeas;
 
 #if USE_UART==1
-    char str[32];
-    sprintf(str, "%d %d %d %d %d %d\n", samples_left.ch0, samples_mid.ch0, samples_right.ch0, samples_all.ch2, samples_all.ch0, samples_all.ch1);
+    char str[64];
+    sprintf(str, "%d %d %d %d %d %d %d %d\n", samples_left.ch0, samples_mid.ch0, samples_right.ch0, samples_all.ch2, samples_all.ch0, samples_all.ch1, samples_mid.min, samples_mid.nb_min);
     hwuart_Send(str);
 #endif
     // Les 3 canaux donnent les résultat dans l'ordre centre, droite, gauche
-    static uint16_t thr = thrSET;
+    static int16_t thr = thrSET;
     uint16_t currentLED=0;
     int nbLedsOn=0;
     static int lastLED = 0;
@@ -430,6 +430,11 @@ void mHandleSiResult()
                     // Plus de bouton, on accepte le dernier pressé et on fait un FLASH
                     mAcceptButton(lastLED);
 
+#if USE_UART==1
+                    sprintf(str, "%d %d %d %d %d %d ACCEPT %d\n", samples_left.ch0, samples_mid.ch0, samples_right.ch0, samples_all.ch2, samples_all.ch0, samples_all.ch1, lastLED);
+                    hwuart_Send(str);
+#endif
+
                     mDetectCount=0;
                     lastLED=0;
                 }
@@ -473,13 +478,22 @@ void mTrakMin(SI115X_SAMPLES * sample)
 {
     // Traque le minimum
     if (sample->ch0!=0) {
-        if (sample->min >= sample->ch0) {
-            sample->min=sample->ch0;
-            sample->nb_min=0;
-        } else {
+        if (sample->min > sample->ch0) {
+            if (sample->nb_min>0) sample->nb_min=0;
+            else sample->nb_min--;
+
+            sample->min--;
+
+            if (sample->nb_min<-MIN_OVERRIDE) sample->min=sample->ch0;
+        } else if (sample->min < sample->ch0){
+            if (sample->nb_min<0) sample->nb_min=0;
+            else sample->nb_min++;
+
             sample->min++;
-            sample->nb_min++;
+
             if (sample->nb_min>MIN_OVERRIDE) sample->min=sample->ch0;
+        } else {
+            sample->nb_min=0;
         }
     } else {
         sample->min=0;
