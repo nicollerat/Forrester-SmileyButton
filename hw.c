@@ -15,7 +15,6 @@
 #define PIN_LED_YELLOW  GPIO_PIN1
 #define PIN_LED_RED     GPIO_PIN2
 
-#define DEBUG_LED
 
 #if PROC_SPEED==1
 #define CS_SMCLK_DESIRED_FREQUENCY_IN_KHZ   400
@@ -316,7 +315,7 @@ void hwInit()
 // LED de debug
 void hwDebLedOn(uint8_t mask)
 {
-#ifdef DEBUG_LED
+#if DEBUG_LED==1
     P2OUT |= mask << 5;
 #endif
 }

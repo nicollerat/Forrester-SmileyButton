@@ -91,15 +91,25 @@
 // Define the period
 // can handle 2 and 4. See function si115x_init_1CH()
 #define TICK_PER_SECOND 4
+
+#define LED_CURRENT 2  // 1:390mA, 2:100mA, 3:50mA
+
+#if LED_CURRENT==1
 #define THR_SET         60
 #define THR_OFFSET      20 // Originally 5
+#else
+#define THR_SET         40
+#define THR_OFFSET      20 // Originally 5
+#endif
 
+// Debug stuff
 #define USE_UART 1
+#define DEBUG_LED 0
 
 #define LOCK_MAX_SEC    (10*60)
 #define PROG_MAX_DELAY  (5*TICK_PER_SECOND) // s après on prend le setup du temps
 
-#define DEFAULT_LOCK_SEC   2 // seconds, default button lock time
+#define DEFAULT_LOCK_SEC   2 // seconds, default button lock time (10)
 #define PROG_BLANKING   10 // Temps de blocage après programmation
 #define PROG_MIN_TIME   (2*TICK_PER_SECOND)
 #define PROG_MAX_TIME   (10*60*TICK_PER_SECOND)

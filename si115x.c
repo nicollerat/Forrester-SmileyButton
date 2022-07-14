@@ -125,7 +125,7 @@ int16_t si115x_init_1CH( HANDLE*si115x_handle, int timeShift )
     devREVID = Si115xReadFromRegister(si115x_handle, SI115x_REG_MFR_ID);
 
     // Proposé par le soft de test
-    switch(1){
+    switch(LED_CURRENT){
     case 1: // high current
         retval += Si115xParamSet(si115x_handle, PARAM_LED1_A, 0x3f);
         break;
