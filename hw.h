@@ -31,6 +31,7 @@ void hwStartTimerForever();
 void hwDebLedOn(uint8_t mask);
 void hwDebLedOff(uint8_t mask);
 bool hwLedTick();
+bool hwIsButtonPressed();
 
 extern uint16_t hwFlagP2Interrupt ;
 

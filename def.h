@@ -43,6 +43,8 @@
         1.2   MN    9.6.22  Résurrection de l'algorithme avec le changement d'offset
 
         1.3   MN    15.6.22  Algo minimum revu pour tenir compte pic négatif.
+
+        1.4  MN     19.08.22 Reset des seuils lors de l'appuis d'un bouton
  */
 
 #ifndef DEF_H_
@@ -116,6 +118,8 @@
 
 #define PROG_ENTER_LOW  (5*TICK_PER_SECOND)
 #define PROG_ENTER_HIGH (8*TICK_PER_SECOND)
+
+#define RESET_TICKS (TICK_PER_SECOND)
 
 #define NB_SUCCESSIVE   (1) // nombre de mesure identique successives pour prendre un vote
 #define RESEND_TIME     (10 * TICK_PER_SECOND) // Temps entre les envois (1/2 s)

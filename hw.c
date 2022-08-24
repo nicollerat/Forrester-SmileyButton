@@ -120,6 +120,14 @@ void hwBackground()
     }
 }
 
+/* Retourne vrai si un bouton est pressé
+ *
+ */
+bool hwIsButtonPressed()
+{
+    return (P4IN & (GPIO_PIN4 | GPIO_PIN5 | GPIO_PIN0)) != (GPIO_PIN4 | GPIO_PIN5 | GPIO_PIN0);
+}
+
 void hwInitClock()
 {
     //Initialisations selon exemple :
@@ -451,7 +459,7 @@ __interrupt void P2_ISR (void)
     __bic_SR_register_on_exit(CPUOFF);
 }
 
-// Traitement des interruptions des capteurs
+// Traitement des interruptions des boutons
 #pragma vector=PORT4_VECTOR
 __interrupt void P4_ISR (void)
 {

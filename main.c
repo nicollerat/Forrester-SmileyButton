@@ -43,6 +43,9 @@ bool isProgramming = false;
 // Keep the current mode of the Smiley
 tSmileyMode smileyMode = mode_TEST;
 
+// Utilisé pour redémarrer le seuil IR
+int mResetIRmin = 0;
+
 struct I2C_HANDLE I2C_LEFT;
 struct I2C_HANDLE I2C_MID;
 struct I2C_HANDLE I2C_RIGHT;
@@ -260,6 +263,7 @@ void mAcceptButton(int button)
     mButtonPressed(button);
     hwFlashLed(button);
     mBlankingCounter=mLockTime;
+    mResetIRmin= RESET_TICKS;
 }
 
 void mPushButtonHandler(int button)
@@ -473,7 +477,23 @@ void mHandleSiResult()
     }
 }
 
-// Partir avec une grande valeur
+/* Force le minimum à la valeur courante
+ *  Ajuste le compteur
+ */
+void mSetMin(SI115X_SAMPLES * sample)
+{
+    sample->min=sample->ch0;
+    sample->nb_min=0;
+}
+
+/*  Traque le minimum pour un capteur
+ *
+ *      min : minimum actuel
+ *      nb_min : compteur.
+ *
+ *          min est incrémenté ou décrémenté selon qu'il est plus grand ou plus petit
+ *          après un certain délais, il est ajusté à la valeur courante
+ */
 void mTrakMin(SI115X_SAMPLES * sample)
 {
     // Traque le minimum
@@ -525,6 +545,17 @@ void mSi115xHandler(int src)
         // Traite sur le bouton du milieu pour avoir la cadence 1/mesures
         if (CONFIG_CHIP==MULTI_CHIP) {
 
+            // Reset les minimums lorsqu'un bouton physique a été pressé
+            //  Ceci se fait pour un certain délais (genre 1s) à partir du moment où le bouton est relâché
+            if (mResetIRmin>0) {
+                mSetMin(&samples_left);
+                mSetMin(&samples_mid);
+                mSetMin(&samples_right);
+
+                if (!hwIsButtonPressed()) { // Quand les boutons sont relâchés, attend le délais
+                    mResetIRmin--;
+                }
+            }
             samples_all.ch0 = samples_mid.ch0 - samples_mid.min;
             samples_all.ch1 = samples_right.ch0 - samples_right.min;
             samples_all.ch2 = samples_left.ch0 - samples_left.min;
