@@ -250,6 +250,17 @@ void hwPWMLedStart()
 
 }
 
+// Used on the jumper connector
+void hwSetEX1(bool state)
+{
+    if ( state) {
+        GPIO_setOutputHighOnPin(GPIO_PORT_P6, GPIO_PIN5);
+    } else {
+        GPIO_setOutputLowOnPin(GPIO_PORT_P6, GPIO_PIN5);
+    }
+}
+
+
 /* Initialise les I/O utilisées
  *
  */
@@ -273,16 +284,19 @@ void hwInit()
     GPIO_setOutputLowOnPin(GPIO_PORT_P5, 0x1F);
     GPIO_setAsOutputPin(GPIO_PORT_P5, 0x1F);
 
+    GPIO_setOutputLowOnPin(GPIO_PORT_P6, GPIO_PIN5);
+    GPIO_setAsOutputPin(GPIO_PORT_P6, GPIO_PIN5);
+
    // LED + LED_POWER
     GPIO_setOutputLowOnPin(GPIO_PORT_P6,
-        GPIO_PIN0 + GPIO_PIN1 + GPIO_PIN2 + GPIO_PIN4);
+        GPIO_PIN0 + GPIO_PIN1 + GPIO_PIN2);
 
    GPIO_setAsOutputPin(
         GPIO_PORT_P6,
-        GPIO_PIN0 + GPIO_PIN1 + GPIO_PIN2 + GPIO_PIN4
+        GPIO_PIN0 + GPIO_PIN1 + GPIO_PIN2
         );
 
-   GPIO_setAsOutputPin(GPIO_PORT_P6, 0xe8);
+   //GPIO_setAsOutputPin(GPIO_PORT_P6, 0xe8);
 
    // Interruption des chip capteurs
 

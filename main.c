@@ -30,6 +30,8 @@ int mDetectCount=0;
 bool mSending = false;
 int16_t mBatVoltage=0;
 volatile int timer=0;
+volatile int mTurnOffEX1Timer=0;
+
 bool mSensorStopped=false;
 
 #define TEST_DELAY (3000 * 3)
@@ -59,6 +61,7 @@ void mTick()
     timer++;
     hwLedTick();
     hwDebLedOff(1);
+
 }
 
 /* Stoppe les capteurs et programme le watchdog pour qu'il soit un timer
@@ -133,6 +136,10 @@ void mStartTest()
 void mButtonPressed(uint8_t mask)
 {
     if (bHandleButtonNormal((mask&LED_GREEN)!=0, (mask&LED_YELLOW)!=0, (mask&LED_RED)!=0)) {
+        if (mask & LED_RED) {
+            hwSetEX1(true);
+            mTurnOffEX1Timer=EX1_PULSE_WIDTH;
+        }
         nrfNewButton();
     }
 }
@@ -309,6 +316,13 @@ void mHandleSiResult()
     static int lastLED = 0;
     static int LedOnCount = 0; // Limite le temps ON
 
+    // Turn off the EX1 pulse
+    if (mTurnOffEX1Timer>0) {
+        mTurnOffEX1Timer--;
+        if (mTurnOffEX1Timer==0) {
+            hwSetEX1(false);
+        }
+    }
 
     // Test du blocage
     if (mBlankingCounter && (smileyMode == mode_NORMAL)) {

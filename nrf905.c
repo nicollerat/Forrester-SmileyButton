@@ -241,6 +241,7 @@ void nrfNewButton()
 {
     nrfSendData();
     nrfResendCounter=RESEND_TIME;
+
 }
 
 // Appelé à la période des mesures

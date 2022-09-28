@@ -32,6 +32,7 @@ void hwDebLedOn(uint8_t mask);
 void hwDebLedOff(uint8_t mask);
 bool hwLedTick();
 bool hwIsButtonPressed();
+void hwSetEX1(bool state);
 
 extern uint16_t hwFlagP2Interrupt ;
 

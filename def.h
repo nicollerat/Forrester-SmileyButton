@@ -45,6 +45,8 @@
         1.3   MN    15.6.22  Algo minimum revu pour tenir compte pic négatif.
 
         1.4  MN     19.08.22 Reset des seuils lors de l'appuis d'un bouton
+
+        1.5  MN    7.9.22  Génère une impulsion sur le connecteur pour le In Out
  */
 
 #ifndef DEF_H_
@@ -131,5 +133,7 @@
 #define LED_MODE     2  // 1 for direct, 2 for PWM
 #define PROC_SPEED   1  // 1 400kHz, 2 8Mhz
 //#define DEBUG_LED
+
+#define EX1_PULSE_WIDTH (3 * TICK_PER_SECOND)
 
 #endif /* DEF_H_ */
