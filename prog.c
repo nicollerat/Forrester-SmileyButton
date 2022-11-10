@@ -37,10 +37,15 @@ unsigned int progTempLockTime=0;
 int progLock1Second, progLock10Secs, progLock1Minute;
 int8_t tempRFsetup=0;
 
+#define TICK_PER_SECOND TIM_TICK_PER_SECOND
+
+#define PULSE_TICKS     (TICK_PER_SECOND/2)
+#define PULSE_MID_TICKS (TICK_PER_SECOND/4)
+
 void progStartShowTime()
 {
-    progTempLockTime = mLockTime / TICK_PER_SECOND; // Lock time est donné en 1/2 seconde
-    progCounter=1;
+    progTempLockTime = mLockTime / WD_TICK_PER_SECOND; // Lock time est donné en tick (wd ou si)
+    progCounter=PULSE_TICKS;
     hwSetLed(LED_ALL);
 }
 
@@ -59,10 +64,12 @@ bool progContinueShowTime()
             hwSetLed(LEDG);
             progTempLockTime-=1;
         }
-        progCounter=1;
+        progCounter=PULSE_TICKS;
     } else {
-        hwClearLed(LED_ALL);
-        progCounter=0;
+        if (progCounter==PULSE_MID_TICKS) {
+            hwClearLed(LED_ALL);
+        }
+        progCounter--;
     }
 
     return (progTempLockTime==0) && (progCounter==0);
@@ -120,7 +127,7 @@ bool progContinueSetTime(bool bG, bool bM, bool bD)
         }
     } else if (progCounter>=PROG_MAX_DELAY) {
         hwClearLed(LED_ALL);
-        mLockTime = (progLock1Minute *60 + progLock10Secs*10 + progLock1Second) * TICK_PER_SECOND;
+        mLockTime = (progLock1Minute *60 + progLock10Secs*10 + progLock1Second) * WD_TICK_PER_SECOND;
         if (mLockTime>0) {
             if (mLockTime<PROG_MIN_TIME) mLockTime=PROG_MIN_TIME;
             if (mLockTime>PROG_MAX_TIME) mLockTime=PROG_MAX_TIME;
@@ -165,15 +172,15 @@ bool progContinueShowFreq()
             hwSetLed(LEDD);
             break;
         }
-        progCounter=1;
+        progCounter++;
         break;
 
-    case 1:
+    case PULSE_MID_TICKS:
         hwClearLed(LED_ALL);
-        progCounter=2;
+        progCounter++;
         break;
 
-    case 2:
+    case PULSE_TICKS:
         switch (mRFsetup) {
         case MIN_VERSION:
             hwSetLed(LEDG);
@@ -187,13 +194,17 @@ bool progContinueShowFreq()
             hwSetLed(LEDD);
             break;
         }
-        progCounter=3;
+        progCounter++;
         break;
 
-    default:
+     case PULSE_MID_TICKS*2:
         hwClearLed(LED_ALL);
         ret=true;
         break;
+
+     default:
+         progCounter++;
+         break;
     }
 
     return ret;
@@ -336,7 +347,7 @@ bool progHandleButtonState(bool BG, bool BM, bool BD)
         break;
 
     case psWaitSetTime:
-        if (!BM && !BG && !BD) {
+        if ((!BM) && (!BG) && (!BD)) {
             progState=psSetTime;
         } else {
             progCounter++;

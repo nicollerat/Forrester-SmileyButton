@@ -141,8 +141,6 @@ int16_t hwSendI2CB0(HANDLE *handle, uint8_t * data, int len)
 
     if(len > 1) //cas pour plusieurs Bytes
     {
-        // TODO cause une interrupt ? HWREG16(handle->BASE + OFS_UCBxIE) |= UCNACKIE;
-        // EUSCI_B_I2C_masterSendMultiByteStart(handle->BASE, data[0]);
 
         //Send start condition.
         HWREG16(handle->BASE + OFS_UCBxCTLW0) |= UCTR +  UCTXSTT;
@@ -150,11 +148,6 @@ int16_t hwSendI2CB0(HANDLE *handle, uint8_t * data, int len)
         //Poll for transmit interrupt flag.
         while (!(HWREG16(handle->BASE + OFS_UCBxIFG) & (UCTXIFG|UCNACKIE))) ;
 
-        //Send single byte data.
-//        HWREG16(handle->BASE + OFS_UCBxTXBUF) = txData;
-
-        //Poll for transmit interrupt flag.
-//        while (!(HWREG16(handle->BASE + OFS_UCBxIFG) & (UCTXIFG| UCNACKIE))) ;
 
         if (HWREG16(handle->BASE + OFS_UCBxIFG) & ( UCNACKIE )) {
             HWREG16(handle->BASE + OFS_UCB0CTLW0) |= UCTXSTP;
@@ -180,8 +173,6 @@ int16_t hwSendI2CB0(HANDLE *handle, uint8_t * data, int len)
     else if(len == 1) //cas pour un seul byte
     {
 
-        // TODO cause une interrupt ? HWREG16(handle->BASE + OFS_UCBxIE) |= UCNACKIE;
-
         EUSCI_B_I2C_masterSendSingleByte(handle->BASE, data[0]);
 
         if (HWREG16(handle->BASE + OFS_UCBxIFG) & UCNACKIE) {
@@ -196,7 +187,7 @@ int16_t hwSendI2CB0(HANDLE *handle, uint8_t * data, int len)
 
 void hwSendI2CA(HANDLE *handle, uint8_t * data, int len)
 {
-    //TODO: Write pour le port A
+    //: Write pour le port A
 }
 
 /*
@@ -219,7 +210,7 @@ void hwReadI2C(HANDLE*handle, uint8_t address, uint8_t * data, int len)
 
 void hwInitI2CA0(HANDLE*handle)
 {
-    //TODO: Init A0
+    //: Init A0
 }
 
 // Exemple sans accès à driverlib
@@ -232,7 +223,6 @@ unsigned char i2c_read_B0(unsigned char slv_addr, unsigned char reg_addr)
 
     // Définit l'adresse du slave
     UCB0I2CSA = slv_addr;
-    // TODO cause une interrupt ? UCB0IE |= UCNACKIE;
 
     // Transmet le start
     UCB0CTLW0 |= UCTR | UCTXSTT;
@@ -278,7 +268,6 @@ unsigned char i2c_read_B1(unsigned char slv_addr, unsigned char reg_addr)
 
     // Définit l'adresse du slave
     UCB1I2CSA = slv_addr;
-    // TODO cause une interrupt ? UCB1IE |= UCNACKIE;
 
     // Transmet le start
     UCB1CTLW0 |= UCTR | UCTXSTT;
@@ -394,7 +383,7 @@ void hwReadI2CB0(HANDLE*handle, uint8_t address, uint8_t * data, int len)
             uint16_t * pIfg = ifg_val;
             c1=0;c2=0;c3=0;c4=0;c5=0;
 
-            // TODO faire marcher ça
+            //
             *pIfg++=HWREG16(handle->BASE + OFS_UCBxIFG);
             //def. mode (receive) + slave addr.
 
@@ -482,7 +471,7 @@ void hwReadI2CB0(HANDLE*handle, uint8_t address, uint8_t * data, int len)
 
 void hwReadI2CA0(HANDLE*handle, uint8_t address, uint8_t * data, int len)
 {
-    //TODO: Read pour le port A
+    //: Read pour le port A
 }
 
 int hwUCB0Cnt=0;

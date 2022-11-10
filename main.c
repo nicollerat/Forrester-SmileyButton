@@ -24,7 +24,7 @@ uint8_t devID[4] = DEV_ID;
 #pragma SET_DATA_SECTION()
 
 uint16_t mRFsetup = DEFAULT_RF_VERSION;
-uint16_t mLockTime = DEFAULT_LOCK_SEC * TICK_PER_SECOND;
+uint16_t mLockTime = DEFAULT_LOCK_SEC * WD_TICK_PER_SECOND;
 int mDetectCount=0;
 
 bool mSending = false;
@@ -34,11 +34,9 @@ volatile int mTurnOffEX1Timer=0;
 
 bool mSensorStopped=false;
 
-#define TEST_DELAY (3000 * 3)
 
 // Periode de mesure
-int mMeasPeriod_10ms = 50;
-int mTurnOffDelay_10ms = TEST_DELAY;
+int mTurnOffDelay = TEST_DELAY;
 
 bool isProgramming = false;
 
@@ -53,7 +51,7 @@ struct I2C_HANDLE I2C_MID;
 struct I2C_HANDLE I2C_RIGHT;
 
 /* Tick est utilisé pour éteindre les LEDs
- *   TODO utilise pour de plus amples tâches ?
+ *
  */
 void mTick()
 {
@@ -69,7 +67,7 @@ void mTick()
  */
 void mStopSensors()
 {
-
+#if USE_IR==1
     si115x_Stop(&I2C_MID);
     si115x_Stop(&I2C_LEFT);
     si115x_Stop(&I2C_RIGHT);
@@ -85,6 +83,10 @@ void mStopSensors()
     // Valide l'interruption du watchdog
     SFRIE1 |= WDTIE;
 
+#else
+    hwTimerSimIRStop();
+#endif
+
     smileyMode = mode_OFF;
     hwClearLed(LED_ALL);
 }
@@ -94,7 +96,7 @@ void mStopSensors()
  */
 void mStartSensors()
 {
-
+#if USE_IR==1
     // Utilise le watchdog comme timer pour tester le bouton
     WDT_A_hold(WDT_A_BASE);
 
@@ -108,6 +110,9 @@ void mStartSensors()
     si115x_Start(&I2C_MID);
     si115x_Start(&I2C_LEFT);
     si115x_Start(&I2C_RIGHT);
+#else
+    hwTimerSimIRStart();
+#endif
 
     GPIO_clearInterrupt( GPIO_PORT_P2, 0xFFFF);
 }
@@ -117,7 +122,7 @@ void mStartNormal()
 {
     hwSetLed(LED_GREEN);
     mStartSensors();
-    mTurnOffDelay_10ms = -1;
+    mTurnOffDelay = -1;
     hwClearLed(LED_GREEN);
     smileyMode = mode_NORMAL;
 }
@@ -126,7 +131,7 @@ void mStartTest()
 {
     hwSetLed(LED_RED);
     mStartSensors();
-    mTurnOffDelay_10ms= TEST_DELAY; // As there are 3 sensors, time is decremented 3 times faster
+    mTurnOffDelay= TEST_DELAY; // As there are 3 sensors, time is decremented 3 times faster
     hwClearLed(LED_RED);
     smileyMode = mode_TEST;
 }
@@ -136,6 +141,7 @@ void mStartTest()
 void mButtonPressed(uint8_t mask)
 {
     if (bHandleButtonNormal((mask&LED_GREEN)!=0, (mask&LED_YELLOW)!=0, (mask&LED_RED)!=0)) {
+        // Generate a pulse on the EX1 signal (intended for the InOut)
         if (mask & LED_RED) {
             hwSetEX1(true);
             mTurnOffEX1Timer=EX1_PULSE_WIDTH;
@@ -159,8 +165,6 @@ int main(void) {
 
     //configuration des I2C_HANDLE
 
-
-
     I2C_LEFT.BASE = EUSCI_B1_BASE;
     I2C_LEFT.isA = false;
     I2C_LEFT.slave_addr = 0x53;
@@ -173,12 +177,25 @@ int main(void) {
     I2C_RIGHT.isA = false;
     I2C_RIGHT.slave_addr = 0x52;
 
+    // Initialize watchdog
+    // Depend on configuration
+#if USE_IR==1
     WDT_A_hold(WDT_A_BASE);
     // Démarre le WD
+    // Le VLO est à 10k
     WDT_A_initWatchdogTimer(WDT_A_BASE, WDT_A_CLOCKSOURCE_VLOCLK , WDT_A_CLOCKDIVIDER_32K);
-    //WDT_A_initWatchdogTimer(WDT_A_BASE, WDT_A_CLOCKSOURCE_VLOCLK , WDT_A_CLOCKDIVIDER_512K);
 
+    // TODO why the watchdog timer does not trigger interrupts any more ?????
     WDT_A_start(WDT_A_BASE);
+#else
+    WDT_A_hold(WDT_A_BASE);
+    // Démarre le WD
+    // Le VLO est à 10k, on veut des interruptions de l'ordre d'une seconde
+
+    SFRIE1  |= WDTIE;
+    WDT_A_initIntervalTimer(WDT_A_BASE, WDT_A_CLOCKSOURCE_VLOCLK, WDT_A_CLOCKDIVIDER_8192);
+    WDT_A_start(WDT_A_BASE);
+#endif
 
     hwInit();
 
@@ -194,10 +211,10 @@ int main(void) {
 
     hwSetLed(LED_RED+LED_YELLOW+LED_GREEN);
 
+#if USE_IR==1
     switch(CONFIG_CHIP) {
     case SINGLE_CHIP:
         mMeasPeriod_10ms = si115x_init_3CH(&I2C_MID);
-        Si115xStart(&I2C_MID);
         break;
 
     case MULTI_CHIP:
@@ -205,12 +222,10 @@ int main(void) {
         si115x_init_1CH(&I2C_RIGHT, -1);
         si115x_init_1CH(&I2C_LEFT, 1);
 
-        Si115xStart(&I2C_LEFT);
-        Si115xStart(&I2C_MID);
-        Si115xStart(&I2C_RIGHT);
         break;
 
     }
+#endif
 
     hwClearLed(LED_YELLOW);
 
@@ -234,32 +249,41 @@ int main(void) {
     while (1)
     {
         //Enter LPM0, enable interrupts
-            //__bis_SR_register(LPM0_bits + GIE);
-            if ((P2IN & 0x7) != 0x7) { // Une ligne est activée...
-                hwFlagP2Interrupt = (P2IN & 0x7) ^ 0x7;
-            } else {
-                __bis_SR_register(LPM4_bits + GIE);
-            }
-            WDT_A_resetTimer(WDT_A_BASE);
-            hwBackground();
-
-            // Test le délais d'extinction
-            if (isProgramming) {
-                // Reset the delay
-                if (mTurnOffDelay_10ms>0) mTurnOffDelay_10ms=TEST_DELAY;
-            } else {
-                if (mTurnOffDelay_10ms>0) {
-                    if (mTurnOffDelay_10ms<=3*mMeasPeriod_10ms) {
-                        hwSetLed(LED_ALL);
-                    }
-                    mTurnOffDelay_10ms -= mMeasPeriod_10ms;
-                    if (mTurnOffDelay_10ms<=0) {
-                        mStopSensors();
-                    }
-                }
-            }
+        //__bis_SR_register(LPM0_bits + GIE);
+#if USR_IR==1
+        if ((P2IN & 0x7) != 0x7) { // Une ligne est activée...
+            hwFlagP2Interrupt = (P2IN & 0x7) ^ 0x7;
+        } else {
+            __bis_SR_register(LPM4_bits + GIE);
+        }
+#else
+        __bis_SR_register(LPM4_bits + GIE );
+#endif
+        // Resume here from sleep
+        WDT_A_resetTimer(WDT_A_BASE);
+        hwBackground();
     }
 
+}
+
+/* Check if the system has to shut down
+ *
+ */
+void mProcTurnOff()
+{
+    // Test le délais d'extinction
+    if (isProgramming) {
+       // Reset the delay
+       if (mTurnOffDelay>0) mTurnOffDelay=TEST_DELAY;
+    } else {
+       if (smileyMode==mode_TEST) {
+           if (mTurnOffDelay>0) mTurnOffDelay--;
+           else {
+               hwSetLed(LED_ALL);
+               mStopSensors();
+           }
+       }
+    }
 }
 
 int mBlankingCounter = 0;
@@ -267,12 +291,15 @@ int mBlankingCounter = 0;
 // Traite une pression de bouton
 void mAcceptButton(int button)
 {
-    mButtonPressed(button);
-    hwFlashLed(button);
-    mBlankingCounter=mLockTime;
-    mResetIRmin= RESET_TICKS;
+    if (button) {
+        mButtonPressed(button);
+        hwFlashLed(button);
+        mBlankingCounter=mLockTime;
+        mResetIRmin= RESET_TICKS;
+    }
 }
 
+// This is not called ?
 void mPushButtonHandler(int button)
 {
     if (mBlankingCounter && (smileyMode == mode_NORMAL)) {
@@ -284,6 +311,20 @@ void mPushButtonHandler(int button)
     }
 }
 
+/* This is the output used by the InOUt device
+ *
+ */
+void mHandleEX1()
+{
+    // Turn off the EX1 pulse
+    if (mTurnOffEX1Timer>0) {
+        mTurnOffEX1Timer--;
+        if (mTurnOffEX1Timer==0) {
+            hwSetEX1(false);
+        }
+    }
+}
+
 // Mesures faites par un des capteurs
 SI115X_SAMPLES samples_left = {.min=0xFFFF};
 SI115X_SAMPLES samples_mid = {.min=0xFFFF};
@@ -291,7 +332,36 @@ SI115X_SAMPLES samples_right = {.min=0xFFFF};
 
 SI115X_SAMPLES samples_all;
 
+// Called periodically by background, with a possible button press
+void mTimerButtonHandler(int buttons)
+{
 
+    // Test du blocage
+    if (mBlankingCounter && (smileyMode == mode_NORMAL)) {
+        // count down in watchdog time process mBlankingCounter--;
+    } else {
+       bool BG = buttons & LED_GREEN;
+       bool BM =  buttons & LED_YELLOW;
+       bool BD =  buttons & LED_RED;
+       if (progHandleButtonState(BG, BM, BD)) {
+           isProgramming=true;
+           return;
+       } else if (isProgramming) { // si on sort de programmation
+           // Si on est dans la phase test, on revient en test sans blanking
+           if (mTurnOffDelay>0) {
+               mBlankingCounter=0;
+           } else {
+               mBlankingCounter=PROG_BLANKING;
+           }
+           isProgramming=false;
+           hwClearLed(LED_ALL);
+       }
+
+       mAcceptButton(buttons);
+    }
+
+
+}
 
 // Traite les résultats obtenus pour allumer les LEDs
 //   On détermine quel bouton est le plus probablement pressé
@@ -316,13 +386,7 @@ void mHandleSiResult()
     static int lastLED = 0;
     static int LedOnCount = 0; // Limite le temps ON
 
-    // Turn off the EX1 pulse
-    if (mTurnOffEX1Timer>0) {
-        mTurnOffEX1Timer--;
-        if (mTurnOffEX1Timer==0) {
-            hwSetEX1(false);
-        }
-    }
+    mHandleEX1();
 
     // Test du blocage
     if (mBlankingCounter && (smileyMode == mode_NORMAL)) {
@@ -337,7 +401,7 @@ void mHandleSiResult()
             isProgramming=true;
             return;
         } else if (isProgramming) {
-            if (mTurnOffDelay_10ms>0) {
+            if (mTurnOffDelay>0) {
                 mBlankingCounter=0;
             } else {
                 mBlankingCounter=PROG_BLANKING;
@@ -483,11 +547,11 @@ void mHandleSiResult()
 
     // Conversion de la tension
     if (0) {
-    static int subD = 10;
-    if (--subD==0) {
-        mBatVoltage=hwReadVoltage();
-        subD=10;
-    }
+        static int subD = 10;
+        if (--subD==0) {
+            mBatVoltage=hwReadVoltage();
+            subD=10;
+        }
     }
 }
 

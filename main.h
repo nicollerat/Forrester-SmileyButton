@@ -17,6 +17,10 @@ void mDelay_us(unsigned long  us);
 void mStopSensors();
 void mStartTest();
 void mStartNormal();
+void mPushButtonHandler(int button);
+void mTimerButtonHandler(int buttons);
+void mHandleEX1();
+void mProcTurnOff();
 
 typedef enum { mode_TEST, mode_NORMAL, mode_OFF } tSmileyMode;
 
@@ -25,5 +29,8 @@ extern uint8_t devID[];
 extern uint16_t mRFsetup;
 extern bool mSending;
 extern uint16_t mLockTime;
+extern bool isProgramming;
+extern int mBlankingCounter;
+extern int mTurnOffDelay;
 
 #endif /* MAIN_H_ */

@@ -10,6 +10,7 @@
 #include "hwuart.h"
 #include "main.h"
 #include "def.h"
+#include "nrf905.h"
 
 #define PIN_LED_GREEN   GPIO_PIN0
 #define PIN_LED_YELLOW  GPIO_PIN1
@@ -27,6 +28,8 @@
 uint16_t hwFlagP2Interrupt = 0;
 uint16_t hwFlagP4Interrupt = 0;
 
+bool hwFlagTimer=false;
+bool hwFlagWatchdog=false;
 
 void hwInitAD()
 {
@@ -76,9 +79,10 @@ void hwReset()
 }
 
 uint16_t buttonCount = 0;
-
+int hwTimerOffDelay=0;
 void hwBackground()
 {
+    // Sensors interrupts
     while (hwFlagP2Interrupt) {
         uint16_t src=hwFlagP2Interrupt;
         mSi115xHandler(src);
@@ -87,6 +91,8 @@ void hwBackground()
         __bis_SR_register(GIE);
     }
 
+#if (USE_IR==1) && (USE_BUTTONS==1)
+    // Boutons physiques, l'interruption a mis à jour le FlgaP4Interrupt
     if (hwFlagP4Interrupt) {
         uint16_t src=hwFlagP4Interrupt;
         uint16_t button = 0;
@@ -100,6 +106,50 @@ void hwBackground()
         hwFlagP4Interrupt &= ~src;
         __bis_SR_register(GIE);
     }
+#elif USE_IR==0
+    //
+    //uint16_t src=hwFlagP4Interrupt;
+    //uint16_t src=GPIO_getInputPinValue(GPIO_PORT_P4, GPIO_PIN0+GPIO_PIN4+GPIO_PIN5);
+    if (smileyMode!=mode_OFF) {
+        // If button interrupt occurs, start the sampling timer
+        if (hwFlagP4Interrupt) {
+            hwFlagP4Interrupt=0;
+            hwTimerOffDelay=2;
+            hwTimerSimIRStart();
+        } else {
+            // Stop the timer when only waiting for buttons
+            if (isProgramming) {
+                hwTimerOffDelay=2;
+            } else if (hwTimerOffDelay) {
+                hwTimerOffDelay--;;
+            } else {
+                hwTimerSimIRStop(); // Just stop the timer
+            }
+        }
+    }
+
+    // Ce timer est arrêté dès que possible
+    //   On sample les boutons 2x pour accepter un vote
+    if (hwFlagTimer) {
+        hwFlagTimer=false;
+        uint16_t button = 0;
+        if (GPIO_getInputPinValue(GPIO_PORT_P4, GPIO_PIN4)==0) button |= LED_GREEN;
+        if (GPIO_getInputPinValue(GPIO_PORT_P4, GPIO_PIN5)==0) button |= LED_YELLOW;
+        if (GPIO_getInputPinValue(GPIO_PORT_P4, GPIO_PIN0)==0) button |= LED_RED;
+
+        mTimerButtonHandler(button);
+    }
+
+    if (hwFlagWatchdog) {
+        hwFlagWatchdog=false;
+        // Timer pour la répétition des votes
+        nrfTimerHandler();
+        mHandleEX1();
+        mProcTurnOff();
+        if (mBlankingCounter>0) mBlankingCounter--;
+    }
+#endif
+
 
     if (smileyMode==mode_OFF) {
         // Test du bouton
@@ -167,7 +217,7 @@ void hwInitClock()
             );
 }
 
-#define TIMER_PERIOD 5000 // v * 10us
+#define TIMER_PERIOD 5000 // v * 10us (period is 50ms)
 
 void hwTimerInit()
 {
@@ -205,6 +255,26 @@ void hwTimerInit()
     param.startTimer = true;
     Timer_B_initUpMode(TIMER_B0_BASE, &param);
     //Timer_B_startCounter(TIMER_B0_BASE,  TIMER_B_CONTINUOUS_MODE);
+
+    // Start Timer B1 with a period similar to the Si period (but faster for comfort)
+#if USE_IR==0
+    // Each of these options need more current...
+//#define TIMER_HIGH_DIV
+//#define TIMER_LOW_CLK
+#ifdef TIMER_LOW_CLK
+    param.clockSource = TIMER_B_CLOCKSOURCE_ACLK;
+    param.clockSourceDivider = TIMER_B_CLOCKSOURCE_DIVIDER_1;
+    param.timerPeriod = 32000L / 10; // 100ms period
+#elif defined(TIMER_HIGH_DIV)
+    param.clockSourceDivider = TIMER_B_CLOCKSOURCE_DIVIDER_64;
+    param.timerPeriod = 100000L / 64; // 100ms period
+
+#else
+    param.timerPeriod = 100000L / 10; // 100ms period
+#endif
+    param.timerInterruptEnable_TBIE = TIMER_B_TBIE_INTERRUPT_ENABLE;
+    Timer_B_initUpMode(TIMER_B1_BASE, &param);
+#endif
 }
 
 void hwTimerStart()
@@ -220,6 +290,18 @@ void hwTimerStop()
     Timer_B_clearTimerInterrupt(TIMER_B0_BASE);
 }
 
+void hwTimerSimIRStart()
+{
+    Timer_B_clear(TIMER_B1_BASE);
+    Timer_B_clearTimerInterrupt(TIMER_B1_BASE);
+    Timer_B_startCounter(TIMER_B1_BASE,  TIMER_B_UP_MODE);
+}
+
+void hwTimerSimIRStop()
+{
+    Timer_B_stop(TIMER_B1_BASE);
+    Timer_B_clearTimerInterrupt(TIMER_B1_BASE);
+}
 
 void hwPWMLedsInit()
 {
@@ -304,7 +386,9 @@ void hwInit()
    GPIO_selectInterruptEdge(GPIO_PORT_P2, GPIO_PIN0 + GPIO_PIN1 + GPIO_PIN2, GPIO_HIGH_TO_LOW_TRANSITION);
 
    GPIO_clearInterrupt( GPIO_PORT_P2, GPIO_PIN0 + GPIO_PIN1 + GPIO_PIN2);
+#if USE_IR==1
    GPIO_enableInterrupt(GPIO_PORT_P2, GPIO_PIN0 + GPIO_PIN1 + GPIO_PIN2);
+#endif
 
    GPIO_setAsOutputPin(GPIO_PORT_P2, GPIO_PIN3 + GPIO_PIN4 + GPIO_PIN5 + GPIO_PIN6 + GPIO_PIN7);
    GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN4 + GPIO_PIN5 + GPIO_PIN6 + GPIO_PIN7); // Inutilisé et les LED de debug
@@ -317,7 +401,9 @@ void hwInit()
    GPIO_setAsInputPinWithPullUpResistor(GPIO_PORT_P4, GPIO_PIN0+GPIO_PIN4+GPIO_PIN5);
    GPIO_selectInterruptEdge(GPIO_PORT_P4, GPIO_PIN0+GPIO_PIN4+GPIO_PIN5, GPIO_HIGH_TO_LOW_TRANSITION);
    GPIO_clearInterrupt( GPIO_PORT_P4, GPIO_PIN0+GPIO_PIN4+GPIO_PIN5);
+//#if USE_IR==1 // Buttons are sampled by the timer when IR is not used
    GPIO_enableInterrupt(GPIO_PORT_P4, GPIO_PIN0+GPIO_PIN4+GPIO_PIN5);
+//#endif
 
    // Initialisation d'un timer
    hwTimerInit();
@@ -493,6 +579,7 @@ __interrupt void TIMER0_B1_ISR (void)
 {
     //Any access, read or write, of the TAIV register automatically resets the
     //highest "pending" interrupt flag
+    /*
     switch ( __even_in_range(TB0IV,14) ){
         case  0: break;                          //No interrupt
         case  2: break;                          //CCR1 not used
@@ -506,6 +593,9 @@ __interrupt void TIMER0_B1_ISR (void)
             break;
         default: break;
     }
+    */
+    Timer_B_clearTimerInterrupt(TIMER_B1_BASE);
+    __bic_SR_register_on_exit(CPUOFF);
 }
 
 #pragma vector=TIMER0_B0_VECTOR
@@ -516,13 +606,27 @@ __interrupt void TIMER0_B0_ISR (void)
 
 }
 
+#pragma vector=TIMER1_B0_VECTOR
+__interrupt void TIMER1_B0_ISR (void)
+{
+    hwDebLedOn(2);
+    Timer_B_clearTimerInterrupt(TIMER_B1_BASE);
+    hwFlagTimer=true;
+    hwDebLedOff(2);
+    __bic_SR_register_on_exit(CPUOFF);
+}
+
 int hwWatchdogCnt=0;
 // Interrupt du watchdog utilisé pour tester le bouton en mode veille
 #pragma vector = WDT_VECTOR
 __interrupt void WDT_ISR(void)
 {
+    hwDebLedOn(4);
     hwWatchdogCnt++;
+    hwFlagWatchdog=true;
+
     __bic_SR_register_on_exit(CPUOFF);
+    hwDebLedOff(4);
 }
 
 

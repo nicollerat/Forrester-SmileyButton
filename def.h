@@ -47,6 +47,9 @@
         1.4  MN     19.08.22 Reset des seuils lors de l'appuis d'un bouton
 
         1.5  MN    7.9.22  Génère une impulsion sur le connecteur pour le In Out
+
+        2.0   MN   28.09.22  Version multiple pour pouvoir faire Boutons ou Bouton/IR ou IR
+                       Testée assez bien pour le cas "bouton seulement"
  */
 
 #ifndef DEF_H_
@@ -68,8 +71,8 @@
 #define MAX_VERSION 4
 #define MID_VERSION 5
 
-#define DEFAULT_RF_VERSION EU_VERSION
-//#define DEFAULT_RF_VERSION US_VERSION
+//#define DEFAULT_RF_VERSION EU_VERSION
+#define DEFAULT_RF_VERSION US_VERSION
 
 // Canaux de base pour les régions
     // Formule CH=(freq/2 -422.4)*10
@@ -92,9 +95,20 @@
 
 #define LOCK_MIN_SEC    2 // secondes
 
+// Define what part of the device is used
+#define USE_BUTTONS 1
+#define USE_IR 0
+
 // Define the period
+#if USE_IR==1
 // can handle 2 and 4. See function si115x_init_1CH()
-#define TICK_PER_SECOND 4
+#define TIM_TICK_PER_SECOND 4
+#define WD_TICK_PER_SECOND 4
+
+#else
+#define TIM_TICK_PER_SECOND 10 // with the buttons, define this
+#define WD_TICK_PER_SECOND 1
+#endif
 
 #define LED_CURRENT 2  // 1:390mA, 2:100mA, 3:50mA
 
@@ -107,33 +121,35 @@
 #endif
 
 // Debug stuff
-#define USE_UART 1
-#define DEBUG_LED 0
+#define USE_UART 0
+#define DEBUG_LED 1
 
 #define LOCK_MAX_SEC    (10*60)
-#define PROG_MAX_DELAY  (5*TICK_PER_SECOND) // s après on prend le setup du temps
+#define DEFAULT_LOCK_SEC   10 // seconds, default button lock time (10)
 
-#define DEFAULT_LOCK_SEC   2 // seconds, default button lock time (10)
+#define PROG_MIN_TIME   (2*WD_TICK_PER_SECOND)
+#define PROG_MAX_TIME   (10*60*WD_TICK_PER_SECOND)
+
+#define PROG_MAX_DELAY  (5*TIM_TICK_PER_SECOND) // s après on prend le setup du temps
 #define PROG_BLANKING   10 // Temps de blocage après programmation
-#define PROG_MIN_TIME   (2*TICK_PER_SECOND)
-#define PROG_MAX_TIME   (10*60*TICK_PER_SECOND)
 
-#define PROG_ENTER_LOW  (5*TICK_PER_SECOND)
-#define PROG_ENTER_HIGH (8*TICK_PER_SECOND)
+#define PROG_ENTER_LOW  (5*TIM_TICK_PER_SECOND)
+#define PROG_ENTER_HIGH (8*TIM_TICK_PER_SECOND)
 
-#define RESET_TICKS (TICK_PER_SECOND)
+#define RESET_TICKS (WD_TICK_PER_SECOND)
 
 #define NB_SUCCESSIVE   (1) // nombre de mesure identique successives pour prendre un vote
-#define RESEND_TIME     (10 * TICK_PER_SECOND) // Temps entre les envois (1/2 s)
+#define RESEND_TIME     (10 * WD_TICK_PER_SECOND) // Temps entre les envois (1/2 s)
 
-#define MIN_OVERRIDE    (30 * TICK_PER_SECOND) // Prend le min=valeur après ce nombre de fois sans corriger le min
-#define MAX_TIME_LED_ON (10*TICK_PER_SECOND)
+#define MIN_OVERRIDE    (30 * TIM_TICK_PER_SECOND) // Prend le min=valeur après ce nombre de fois sans corriger le min
+#define MAX_TIME_LED_ON (10 * TIM_TICK_PER_SECOND)
 
 #define USE_SPI         // Ne pénalise pas la conso si pas d'envoi
 #define LED_MODE     2  // 1 for direct, 2 for PWM
 #define PROC_SPEED   1  // 1 400kHz, 2 8Mhz
 //#define DEBUG_LED
+#define TEST_DELAY (30*WD_TICK_PER_SECOND)
 
-#define EX1_PULSE_WIDTH (3 * TICK_PER_SECOND)
+#define EX1_PULSE_WIDTH (3 * WD_TICK_PER_SECOND)
 
 #endif /* DEF_H_ */

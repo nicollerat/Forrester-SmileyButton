@@ -152,7 +152,7 @@ int16_t si115x_init_1CH( HANDLE*si115x_handle, int timeShift )
 
     retval += Si115xParamSet( si115x_handle, PARAM_MEASCONFIG0, 0x61);
 
-    switch(TICK_PER_SECOND) {
+    switch(TIM_TICK_PER_SECOND) {
      case 50: // Rapide 20ms
          retval += Si115xParamSet(si115x_handle, PARAM_MEASRATE_L, 0x19+timeShift);
          measPeriod=2;
@@ -242,7 +242,7 @@ void si115x_handler(HANDLE *si115x_handle, SI115X_SAMPLES *samples)
 
 void si115x_Stop(HANDLE *si115x_handle)
 {
-    // TODO MN should pause the chip
+    // Should pause the chip
     Si115xWriteToRegister( si115x_handle, SI115x_REG_COMMAND, CMD_PAUSE_CH);
 //    Si115xWriteToRegister( si115x_handle, SI115x_REG_COMMAND, CMD_RESET);
 

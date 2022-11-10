@@ -26,6 +26,8 @@ void hwBlinkLed(int mask);
 
 void hwTimerStart();
 void hwTimerStop();
+void hwTimerSimIRStart();
+void hwTimerSimIRStop();
 void hwStartTimerForever();
 
 void hwDebLedOn(uint8_t mask);

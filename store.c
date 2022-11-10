@@ -19,7 +19,7 @@
 // Initialize the FRAM structure with the default values
 tSetup setupData = {
      .RFsetup = DEFAULT_RF_VERSION,
-     .LockTime = DEFAULT_LOCK_SEC * TICK_PER_SECOND,
+     .LockTime = DEFAULT_LOCK_SEC * WD_TICK_PER_SECOND,
      .magic = MAGIC
 };
 
