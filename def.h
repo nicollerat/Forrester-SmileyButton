@@ -66,8 +66,9 @@
 #define MAX_VERSION 4
 #define MID_VERSION 5
 
-#define DEFAULT_RF_VERSION EU_VERSION
+//#define DEFAULT_RF_VERSION EU_VERSION
 //#define DEFAULT_RF_VERSION US_VERSION
+#define DEFAULT_RF_VERSION ASIA_VERSION
 
 // Canaux de base pour les régions
     // Formule CH=(freq/2 -422.4)*10
@@ -105,7 +106,7 @@
 #endif
 
 // Debug stuff
-#define USE_UART 1
+#define USE_UART 0
 #define DEBUG_LED 0
 
 #define LOCK_MAX_SEC    (10*60)
