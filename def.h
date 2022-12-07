@@ -65,7 +65,8 @@
 #define MID_VERSION 5
 
 //#define DEFAULT_RF_VERSION EU_VERSION
-#define DEFAULT_RF_VERSION US_VERSION
+//#define DEFAULT_RF_VERSION US_VERSION
+#define DEFAULT_RF_VERSION ASIA_VERSION
 
 // Canaux de base pour les régions
     // Formule CH=(freq/2 -422.4)*10
@@ -103,13 +104,13 @@
 #endif
 
 // Debug stuff
-#define USE_UART 1
+#define USE_UART 0
 #define DEBUG_LED 0
 
 #define LOCK_MAX_SEC    (10*60)
 #define PROG_MAX_DELAY  (5*TICK_PER_SECOND) // s après on prend le setup du temps
 
-#define DEFAULT_LOCK_SEC   2 // seconds, default button lock time (10)
+#define DEFAULT_LOCK_SEC   10 // seconds, default button lock time (10)
 #define PROG_BLANKING   10 // Temps de blocage après programmation
 #define PROG_MIN_TIME   (2*TICK_PER_SECOND)
 #define PROG_MAX_TIME   (10*60*TICK_PER_SECOND)
